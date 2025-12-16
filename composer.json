@@ -1,0 +1,10 @@
+{
+    "name": "student/clothing-marketplace",
+    "description": "Global Clothing Marketplace Final Project",
+    "type": "project",
+    "require": {
+        "stripe/stripe-php": "^7.0",
+        "phpmailer/phpmailer": "^6.0"
+    }
+    
+}

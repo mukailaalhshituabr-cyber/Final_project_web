@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => 'yourname/clothing-marketplace',
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => 'eca97a33214cce0f0772960938807f80cb06a141',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
+    ),
+    'versions' => array(
+        'phpmailer/phpmailer' => array(
+            'pretty_version' => 'v6.12.0',
+            'version' => '6.12.0.0',
+            'reference' => 'd1ac35d784bf9f5e61b424901d5a014967f15b12',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../phpmailer/phpmailer',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'stripe/stripe-php' => array(
+            'pretty_version' => 'v7.128.0',
+            'version' => '7.128.0.0',
+            'reference' => 'c704949c49b72985c76cc61063aa26fefbd2724e',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../stripe/stripe-php',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'yourname/clothing-marketplace' => array(
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => 'eca97a33214cce0f0772960938807f80cb06a141',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);

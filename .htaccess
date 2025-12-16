@@ -1,0 +1,13 @@
+RewriteEngine On
+RewriteBase /clothing-marketplace/
+
+# Protect sensitive directories
+RewriteRule ^(includes|src|sql) - [F,L]
+
+# Remove .php extension
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# API routing
+RewriteRule ^api/([^/]+)/([^/]+)/?$ api/$1.php?action=$2 [QSA,L]
