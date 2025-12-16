@@ -11,7 +11,7 @@ define('DB_NAME', 'clothing_marketplace');
 define('SITE_URL', 'http://localhost/webtech/clothing-marketplace');
 define('SITE_NAME', 'Global Clothing Marketplace');
 
-// File upload paths
+// File upload path
 define('UPLOAD_PATH', $_SERVER['DOCUMENT_ROOT'] . '/clothing-marketplace/assets/uploads/');
 define('PRODUCT_IMAGES', 'products/');
 define('PROFILE_IMAGES', 'profile/');
