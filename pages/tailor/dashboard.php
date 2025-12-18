@@ -1,4 +1,3 @@
-
 <?php
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
@@ -8,9 +7,7 @@ require_once '../../includes/classes/Product.php';
 require_once '../../includes/classes/Chat.php';
 
 // Check authentication and tailor role
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
     header('Location: ../auth/login.php');
     exit();
@@ -199,7 +196,6 @@ if ($totalProducts === 0 && $totalOrders === 0) {
         }
         
         body {
-            padding-top: 93px;
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
