@@ -1,33 +1,57 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 ini_set('memory_limit', '1024M');
 
+/**
+ * Simple .env Loader
+ */
+function loadEnv($path) {
+    if (!file_exists($path)) {
+        return false;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue; // Skip comments
+        
+        // Split by the first '=' found
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+        }
+    }
+}
+
+// Load the environment variables
+loadEnv(__DIR__ . '/.env');
+
 // Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'mukaila.shittu');
-define('DB_PASS', 'Adf=Tdd3&W');
-define('DB_NAME', 'webtech_2025A_mukaila_shittu');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER'));
+define('DB_PASS', getenv('DB_PASS'));
+define('DB_NAME', getenv('DB_NAME'));
 
 // Site configuration
-define('SITE_URL', 'http://169.239.251.102:341/~mukaila.shittu/Final_project_web/');
-define('SITE_NAME', 'Global Clothing Marketplace');
+define('SITE_URL', getenv('SITE_URL'));
+define('SITE_NAME', getenv('SITE_NAME'));
 
 // File upload paths
-define('UPLOAD_PATH', $_SERVER['DOCUMENT_ROOT'] . '/clothing-marketplaces/assets/uploads/');
+define('UPLOAD_PATH', __DIR__ . '/assets/images/'); 
 define('PRODUCT_IMAGES', 'products/');
-define('PROFILE_IMAGES', 'profile/');
+define('PROFILE_IMAGES', 'avatars/');
 
-// Payment configuration (you'll need to get actual keys)
-define('STRIPE_PUBLISHABLE_KEY', 'your_stripe_publishable_key');
-define('STRIPE_SECRET_KEY', 'your_stripe_secret_key');
+// Payment & Email (Pulled from .env)
+define('STRIPE_PUBLISHABLE_KEY', getenv('STRIPE_PUB_KEY'));
+define('STRIPE_SECRET_KEY', getenv('STRIPE_SEC_KEY'));
+define('SMTP_USER', getenv('SMTP_USER'));
+define('SMTP_PASS', getenv('SMTP_PASS'));
 
-// Email configuration
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'your_email@gmail.com');
-define('SMTP_PASS', 'your_app_password');
-
-// Error reporting (disable in production)
+// Error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ?>
