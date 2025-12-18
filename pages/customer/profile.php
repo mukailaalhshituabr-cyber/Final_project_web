@@ -2,7 +2,7 @@
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
-//require_once '../../includes/classes/Address.php';
+require_once '../../includes/classes/Address.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
