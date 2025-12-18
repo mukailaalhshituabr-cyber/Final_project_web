@@ -166,7 +166,7 @@ $products = $product->getTailorProducts($tailorId);
                                             
                                             <div class="row">
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-bold">Price ($) *</label>
+                                                    <label class="form-label fw-bold">Price (CFA) *</label>
                                                     <input type="number" 
                                                            class="form-control" 
                                                            name="price" 
@@ -221,23 +221,39 @@ $products = $product->getTailorProducts($tailorId);
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold">Product Images *</label>
                                                 <input type="file" 
-                                                       class="form-control" 
-                                                       name="images[]" 
-                                                       multiple 
-                                                       accept="image/*"
-                                                       <?php echo $action == 'add' ? 'required' : ''; ?>>
-                                                <small class="text-muted">Upload up to 5 images (first image will be the main display)</small>
+                                                    class="form-control" 
+                                                    name="images[]" 
+                                                    multiple 
+                                                    accept="image/*"
+                                                    <?php echo $action == 'add' ? 'required' : ''; ?>>
+                                                <small class="text-muted d-block mt-1">First image will be the main display</small>
                                                 
                                                 <?php if ($action == 'edit' && !empty($productData['images'])): ?>
                                                     <div class="mt-3">
-                                                        <label class="form-label">Current Images:</label>
+                                                        <label class="form-label small fw-bold text-uppercase text-secondary">Current Images:</label>
                                                         <div class="row g-2">
                                                             <?php 
                                                             $images = json_decode($productData['images'], true);
-                                                            foreach ($images as $img): ?>
+                                                            
+                                                            // Fallback: if it's not JSON, put it in an array so the loop still works
+                                                            if (!is_array($images)) {
+                                                                $images = [$productData['images']];
+                                                            }
+
+                                                            foreach ($images as $img): 
+                                                                // Remove any leading slashes to prevent "localhost//assets..."
+                                                                $cleanImg = ltrim($img, '/');
+                                                                $imgSrc = SITE_URL . "/assets/images/products/" . $cleanImg;
+                                                            ?>
                                                                 <div class="col-6">
-                                                                    <img src="<?php echo SITE_URL; ?>/assets/uploads/products/<?php echo $img; ?>" 
-                                                                         class="img-fluid rounded">
+                                                                    <div class="position-relative border rounded overflow-hidden shadow-sm bg-light" style="height: 120px;">
+                                                                        <img src="<?php echo $imgSrc; ?>" 
+                                                                            class="w-100 h-100" 
+                                                                            style="object-fit: cover;"
+                                                                            alt="Product Image"
+                                                                            data-debug-path="<?php echo $imgSrc; ?>"
+                                                                            onerror="this.src='<?php echo SITE_URL; ?>/assets/images/placeholder.jpg'; this.classList.add('p-3');">
+                                                                    </div>
                                                                 </div>
                                                             <?php endforeach; ?>
                                                         </div>
@@ -248,29 +264,33 @@ $products = $product->getTailorProducts($tailorId);
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold">Stock Quantity</label>
                                                 <input type="number" 
-                                                       class="form-control" 
-                                                       name="stock" 
-                                                       min="1"
-                                                       value="<?php echo $productData['stock'] ?? 1; ?>">
+                                                    class="form-control shadow-sm" 
+                                                    name="stock" 
+                                                    min="0"
+                                                    value="<?php echo $productData['stock'] ?? 1; ?>">
                                             </div>
                                             
-                                            <div class="form-check mb-3">
-                                                <input class="form-check-input" 
-                                                       type="checkbox" 
-                                                       name="is_customizable" 
-                                                       id="customizable"
-                                                       <?php echo ($productData['is_customizable'] ?? 0) ? 'checked' : ''; ?>>
-                                                <label class="form-check-label" for="customizable">
-                                                    This product can be customized
-                                                </label>
+                                            <div class="card bg-light border-0 mb-3">
+                                                <div class="card-body py-2">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" 
+                                                            type="checkbox" 
+                                                            name="is_customizable" 
+                                                            id="customizable"
+                                                            <?php echo ($productData['is_customizable'] ?? 0) ? 'checked' : ''; ?>>
+                                                        <label class="form-check-label fw-bold" for="customizable">
+                                                            Allow Customization
+                                                        </label>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             <?php if ($action == 'edit'): ?>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Status</label>
+                                                <div class="p-3 border rounded border-primary-subtle bg-white">
+                                                    <label class="form-label fw-bold">Display Status</label>
                                                     <select class="form-select" name="status">
-                                                        <option value="active" <?php echo ($productData['status'] ?? '') == 'active' ? 'selected' : ''; ?>>Active</option>
-                                                        <option value="inactive" <?php echo ($productData['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                                        <option value="active" <?php echo ($productData['status'] ?? '') == 'active' ? 'selected' : ''; ?>>Active (Visible)</option>
+                                                        <option value="inactive" <?php echo ($productData['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>Inactive (Hidden)</option>
                                                     </select>
                                                 </div>
                                             <?php endif; ?>

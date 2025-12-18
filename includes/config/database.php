@@ -1,4 +1,11 @@
 <?php
+/*
+// ============================================
+// DATABASE CLASS - COMPLETE VERSION
+// ============================================
+
+// File: includes/classes/Database.php
+require_once __DIR__ . '/../../config.php';
 class Database {
     private $host = DB_HOST;
     private $user = DB_USER;
@@ -56,6 +63,35 @@ class Database {
         }
     }
     
+
+    public static function fetch($sql, $params = []) {
+        $db = self::getInstance();
+        $db->query($sql);
+        
+        foreach ($params as $key => $value) {
+            // Handle both 0-indexed arrays and associative arrays
+            $p = is_int($key) ? $key + 1 : $key;
+            $db->bind($p, $value);
+        }
+        
+        $db->execute();
+        return $db->stmt->fetch();
+    }
+
+    
+    public static function fetchAll($sql, $params = []) {
+        $db = self::getInstance();
+        $db->query($sql);
+        
+        foreach ($params as $key => $value) {
+            $p = is_int($key) ? $key + 1 : $key;
+            $db->bind($p, $value);
+        }
+        
+        $db->execute();
+        return $db->stmt->fetchAll();
+    }
+
     public function resultSet() {
         $this->execute();
         return $this->stmt->fetchAll();
@@ -74,4 +110,4 @@ class Database {
         return $this->connection->lastInsertId();
     }
 }
-?>
+?>*/

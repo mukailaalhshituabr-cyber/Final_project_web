@@ -1,42 +1,63 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../classes/Database.php';
+
 
 class User {
     private $db;
     
     public function __construct() {
-        $this->db = new Database();
+        $this->db = new Database(); 
+        $this->db = Database::getInstance();
     }
     
     // Register new user
-    public function register($data) {
-        $this->db->query("INSERT INTO users (username, email, password, user_type, full_name, phone, address, bio) 
-                         VALUES (:username, :email, :password, :user_type, :full_name, :phone, :address, :bio)");
-        
-        $sql = "SELECT id FROM users WHERE username = :username LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['username' => $data['username']]);
+    // C:\xampp\htdocs\webtech\clothing-marketplaces\includes\classes\User.php
 
-        if ($stmt->rowCount() > 0) {
-            return [
-                'success' => false,
-                'message' => 'Username already exists'
-            ];
+    public function register($data) {
+
+        // 1️⃣ Check if username exists (Lines 14-23 - already done)
+        $this->db->query("SELECT id FROM users WHERE username = :username LIMIT 1");
+        $this->db->bind(':username', $data['username']);
+        $this->db->execute();
+
+        if ($this->db->rowCount() > 0) {
+            return 'Username already exists.'; // Return string error for register.php handling
         }
+
+        // 2️⃣ ADDED FIX: Check if email exists
+        $this->db->query("SELECT id FROM users WHERE email = :email LIMIT 1");
+        $this->db->bind(':email', $data['email']);
+        $this->db->execute();
+
+        if ($this->db->rowCount() > 0) {
+            return 'The email ' . $data['email'] . ' is already registered.';
+        }
+        
+        // 3️⃣ Insert user (The original code continues from here)
+        $this->db->query("
+            INSERT INTO users 
+            (username, email, password, user_type, full_name, phone, address, bio)
+            VALUES 
+            (:username, :email, :password, :user_type, :full_name, :phone, :address, :bio)
+        ");
+        // ... rest of the binds and execute (your User.php line 43)
+
         $this->db->bind(':username', $data['username']);
         $this->db->bind(':email', $data['email']);
-        $this->db->bind(':password', $data['password']);
+        $this->db->bind(':password', password_hash($data['password'], PASSWORD_DEFAULT));
         $this->db->bind(':user_type', $data['user_type']);
         $this->db->bind(':full_name', $data['full_name']);
         $this->db->bind(':phone', $data['phone'] ?? '');
         $this->db->bind(':address', $data['address'] ?? '');
         $this->db->bind(':bio', $data['bio'] ?? '');
-        
+
         if ($this->db->execute()) {
             return $this->db->lastInsertId();
         }
+
         return false;
     }
+
     
     
     // Login user
@@ -278,5 +299,31 @@ class User {
         
         return $this->db->resultSet();
     }
+
+    public function updateTailorProfile($id, $name, $email, $phone, $address, $bio, $pic) {
+        $query = "UPDATE users SET 
+                full_name = :name, 
+                email = :email, 
+                phone = :phone, 
+                address = :address, 
+                bio = :bio, 
+                profile_pic = :pic 
+                WHERE id = :id";
+        
+        // Notice the change to getConnection()
+        $stmt = $this->db->getConnection()->prepare($query);
+        
+        return $stmt->execute([
+            ':name' => $name,
+            ':email' => $email,
+            ':phone' => $phone,
+            ':address' => $address,
+            ':bio' => $bio,
+            ':pic' => $pic,
+            ':id' => $id
+        ]);
+    }
+
+
 }
 ?>

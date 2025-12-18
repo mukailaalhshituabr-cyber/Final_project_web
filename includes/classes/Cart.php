@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-class StripePayment {
+class Cart {
     private $stripe;
     private $secretKey;
     
@@ -45,7 +45,7 @@ class StripePayment {
         }
     }
     
-    public function getClientSecret($amount) {
+    public function getCartCount($amount) {
         try {
             $paymentIntent = \Stripe\PaymentIntent::create([
                 'amount' => $amount,

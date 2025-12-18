@@ -1,5 +1,393 @@
 <?php
+// ============================================
+// SHOPPING CART PAGE
+// ============================================
+
 require_once '../../config.php';
+
+$page_title = 'Shopping Cart';
+
+if (!is_logged_in()) {
+    redirect('?page=login', 'Please login to view your cart', 'warning');
+}
+
+try {
+    // Get cart items
+    $cart_items = Database::fetchAll("
+        SELECT c.*, p.title, p.price, p.images, p.stock_quantity, 
+               u.username as tailor_name, p.is_customizable
+        FROM cart c
+        LEFT JOIN products p ON c.product_id = p.id
+        LEFT JOIN users u ON p.tailor_id = u.id
+        WHERE c.user_id = ?
+        ORDER BY c.created_at DESC
+    ", [$_SESSION['user_id']]);
+    
+    $cart_count = count($cart_items);
+    
+    // Calculate totals
+    $subtotal = 0;
+    foreach ($cart_items as $item) {
+        $subtotal += $item['price'] * $item['quantity'];
+    }
+    
+    $shipping = $subtotal >= 50 ? 0 : 5.99;
+    $tax = $subtotal * 0.10; // 10% tax
+    $total = $subtotal + $shipping + $tax;
+    
+} catch (Exception $e) {
+    $cart_items = [];
+    $cart_count = 0;
+    $subtotal = $shipping = $tax = $total = 0;
+    $error = "Error loading cart: " . $e->getMessage();
+}
+?>
+
+<div class="cart-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header mb-5">
+            <h1 class="mb-3">Shopping Cart</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="?page=home">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Cart</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <?php if (isset($error)): ?>
+            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php endif; ?>
+        
+        <div class="row">
+            <!-- Cart Items -->
+            <div class="col-lg-8 mb-4">
+                <?php if ($cart_count > 0): ?>
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Cart Items (<?php echo $cart_count; ?>)</h5>
+                            <button id="clearCart" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i> Clear Cart
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="cart-items">
+                                <?php foreach ($cart_items as $item): ?>
+                                <div class="cart-item mb-4 pb-4 border-bottom" data-id="<?php echo $item['id']; ?>">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            <div class="cart-item-image placeholder-image bg-light d-flex align-items-center justify-content-center" style="height: 100px;">
+                                                <i class="fas fa-tshirt fa-3x text-muted"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="cart-item-title"><?php echo htmlspecialchars($item['title']); ?></h6>
+                                            <p class="cart-item-tailor text-muted small mb-1">
+                                                <i class="fas fa-user-tie me-1"></i> <?php echo htmlspecialchars($item['tailor_name']); ?>
+                                            </p>
+                                            <?php if ($item['customization']): ?>
+                                                <p class="cart-item-customization small text-info">
+                                                    <i class="fas fa-cut me-1"></i> Custom: <?php echo htmlspecialchars($item['customization']); ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="quantity-control">
+                                                    <button class="btn btn-sm btn-outline-secondary quantity-minus" data-item-id="<?php echo $item['id']; ?>">-</button>
+                                                    <input type="number" class="form-control form-control-sm text-center quantity-input" 
+                                                           value="<?php echo $item['quantity']; ?>" min="1" max="<?php echo $item['stock_quantity']; ?>" 
+                                                           style="width: 60px;" data-item-id="<?php echo $item['id']; ?>">
+                                                    <button class="btn btn-sm btn-outline-secondary quantity-plus" data-item-id="<?php echo $item['id']; ?>">+</button>
+                                                </div>
+                                                <div class="text-end">
+                                                    <div class="cart-item-price h6 mb-1">
+                                                        $<?php echo number_format($item['price'] * $item['quantity'], 2); ?>
+                                                    </div>
+                                                    <button class="btn btn-sm btn-outline-danger remove-item" data-item-id="<?php echo $item['id']; ?>">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="card text-center py-5">
+                        <i class="fas fa-shopping-cart fa-4x text-muted mb-4"></i>
+                        <h3>Your cart is empty</h3>
+                        <p class="text-muted mb-4">Looks like you haven't added any items to your cart yet.</p>
+                        <a href="?page=products" class="btn btn-primary btn-lg">
+                            <i class="fas fa-shopping-bag me-2"></i> Start Shopping
+                        </a>
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Continue Shopping -->
+                <div class="mt-4">
+                    <a href="?page=products" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i> Continue Shopping
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <?php if ($cart_count > 0): ?>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Order Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-summary">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal</span>
+                                <span>$<?php echo number_format($subtotal, 2); ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Shipping</span>
+                                <span>$<?php echo number_format($shipping, 2); ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tax (10%)</span>
+                                <span>$<?php echo number_format($tax, 2); ?></span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-4">
+                                <strong>Total</strong>
+                                <strong class="h5">$<?php echo number_format($total, 2); ?></strong>
+                            </div>
+                            
+                            <!-- Coupon Code -->
+                            <div class="mb-4">
+                                <label for="couponCode" class="form-label">Coupon Code</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="couponCode" placeholder="Enter code">
+                                    <button class="btn btn-outline-secondary" type="button" id="applyCoupon">Apply</button>
+                                </div>
+                                <div id="couponApplied" class="mt-2 d-none">
+                                    <div class="alert alert-success py-2 d-flex justify-content-between align-items-center">
+                                        <span>Coupon applied: <strong class="coupon-code"></strong></span>
+                                        <button class="btn btn-sm btn-outline-danger" id="removeCoupon">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Checkout Button -->
+                            <a href="?page=checkout" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-lock me-2"></i> Proceed to Checkout
+                            </a>
+                            
+                            <!-- Payment Methods -->
+                            <div class="mt-3 text-center">
+                                <small class="text-muted">We accept:</small>
+                                <div class="mt-2">
+                                    <i class="fab fa-cc-visa fa-2x text-primary mx-1"></i>
+                                    <i class="fab fa-cc-mastercard fa-2x text-danger mx-1"></i>
+                                    <i class="fab fa-cc-paypal fa-2x text-info mx-1"></i>
+                                    <i class="fab fa-cc-stripe fa-2x text-success mx-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Security Info -->
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-shield-alt fa-2x text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-1">Secure Shopping</h6>
+                                <p class="small text-muted mb-0">Your information is protected with 256-bit SSL encryption</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Update quantity
+    $('.quantity-minus, .quantity-plus').on('click', function() {
+        const itemId = $(this).data('item-id');
+        const input = $(`.quantity-input[data-item-id="${itemId}"]`);
+        let quantity = parseInt(input.val());
+        
+        if ($(this).hasClass('quantity-minus')) {
+            quantity = Math.max(1, quantity - 1);
+        } else {
+            quantity += 1;
+        }
+        
+        input.val(quantity);
+        updateCartItem(itemId, quantity);
+    });
+    
+    $('.quantity-input').on('change', function() {
+        const itemId = $(this).data('item-id');
+        const quantity = parseInt($(this).val()) || 1;
+        updateCartItem(itemId, quantity);
+    });
+    
+    // Remove item
+    $('.remove-item').on('click', function() {
+        const itemId = $(this).data('item-id');
+        removeCartItem(itemId);
+    });
+    
+    // Clear cart
+    $('#clearCart').on('click', function() {
+        if (confirm('Are you sure you want to clear your entire cart?')) {
+            clearCart();
+        }
+    });
+    
+    // Apply coupon
+    $('#applyCoupon').on('click', function() {
+        const couponCode = $('#couponCode').val().trim();
+        if (!couponCode) {
+            showNotification('Please enter a coupon code', 'warning');
+            return;
+        }
+        
+        applyCoupon(couponCode);
+    });
+    
+    // Remove coupon
+    $('#removeCoupon').on('click', function() {
+        removeCoupon();
+    });
+    
+    function updateCartItem(itemId, quantity) {
+        $.ajax({
+            url: 'api/cart.php?action=update',
+            method: 'POST',
+            data: { item_id: itemId, quantity: quantity },
+            success: function(response) {
+                if (response.success) {
+                    updateCartDisplay(response);
+                }
+            }
+        });
+    }
+    
+    function removeCartItem(itemId) {
+        if (confirm('Remove this item from cart?')) {
+            $.ajax({
+                url: 'api/cart.php?action=remove',
+                method: 'POST',
+                data: { item_id: itemId },
+                success: function(response) {
+                    if (response.success) {
+                        $(`.cart-item[data-id="${itemId}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            updateCartDisplay(response);
+                            checkEmptyCart();
+                        });
+                    }
+                }
+            });
+        }
+    }
+    
+    function clearCart() {
+        $.ajax({
+            url: 'api/cart.php?action=clear',
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    $('.cart-item').fadeOut(300, function() {
+                        $(this).remove();
+                        updateCartDisplay(response);
+                        checkEmptyCart();
+                    });
+                }
+            }
+        });
+    }
+    
+    function updateCartDisplay(response) {
+        if (response.totals) {
+            // Update totals in the UI
+            $('.cart-item-price').each(function() {
+                // You would update individual item prices here
+            });
+        }
+        
+        // Update cart count in navbar
+        updateCartCount(response.cart_count);
+    }
+    
+    function checkEmptyCart() {
+        if ($('.cart-item').length === 0) {
+            $('.cart-items').html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-shopping-cart fa-4x text-muted mb-4"></i>
+                    <h3>Your cart is empty</h3>
+                    <p class="text-muted mb-4">Looks like you haven't added any items to your cart yet.</p>
+                    <a href="?page=products" class="btn btn-primary btn-lg">
+                        <i class="fas fa-shopping-bag me-2"></i> Start Shopping
+                    </a>
+                </div>
+            `);
+            $('.order-summary').html(`
+                <div class="text-center py-4">
+                    <p class="text-muted">Add items to your cart to see order summary</p>
+                </div>
+            `);
+        }
+    }
+    
+    function applyCoupon(couponCode) {
+        $.ajax({
+            url: 'api/cart.php?action=apply_coupon',
+            method: 'POST',
+            data: { coupon_code: couponCode },
+            success: function(response) {
+                if (response.success) {
+                    $('#couponApplied').removeClass('d-none').find('.coupon-code').text(couponCode);
+                    $('#applyCoupon').hide();
+                    $('#removeCoupon').show();
+                    showNotification('Coupon applied successfully!', 'success');
+                } else {
+                    showNotification(response.message || 'Invalid coupon code', 'danger');
+                }
+            }
+        });
+    }
+    
+    function removeCoupon() {
+        $.ajax({
+            url: 'api/cart.php?action=remove_coupon',
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    $('#couponApplied').addClass('d-none');
+                    $('#couponCode').val('');
+                    $('#applyCoupon').show();
+                    $('#removeCoupon').hide();
+                    showNotification('Coupon removed', 'info');
+                }
+            }
+        });
+    }
+});
+</script>
+
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/Cart.php';
 require_once '../../includes/classes/Product.php';
 
@@ -631,4 +1019,4 @@ $total = $subtotal + $shipping + $tax;
         });
     </script>
 </body>
-</html>
+</html>*/

@@ -87,7 +87,7 @@ if (isset($_SESSION['user_id'])) {
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/tailor/">
+                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
                         <i class="bi bi-person-badge me-1"></i> For Tailors
                     </a>
                 </li>
@@ -240,6 +240,7 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 </div>
+
 
 <!-- Toast Notifications Container -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;">

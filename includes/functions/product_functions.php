@@ -311,6 +311,12 @@ class ProductFunctions {
         $newWidth = round($width * $ratio);
         $newHeight = round($height * $ratio);
         
+        // Inside your resizeProductImage function
+        if (!function_exists('imagecreatetruecolor')) {
+            // If GD is missing, just move the file without resizing as a fallback
+            return false; 
+        }
+
         // Create new image
         $newImage = imagecreatetruecolor($newWidth, $newHeight);
         

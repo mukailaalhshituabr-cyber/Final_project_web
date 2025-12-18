@@ -707,7 +707,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <p class="mb-0"><?php echo $error; ?></p>
                         </div>
                     </div>
-                <?php endif; ?>
+                <?php endif; ?> 
                 
                 <!-- Login Form -->
                 <form method="POST" action="" id="loginForm">
@@ -991,5 +991,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         });
     </script>
-</body>
+</body>rotate
 </html>

@@ -1,9 +1,14 @@
 <?php
-require_once 'config.php';
+require_once 'config.php'; 
+
+$category = $_GET['category'] ?? '';
+$search   = $_GET['search'] ?? '';
+$sort     = $_GET['sort'] ?? 'newest';
+$max_price = $_GET['max_price'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo SITE_NAME; ?> - Global Clothing Marketplace</title>
@@ -21,10 +26,12 @@ require_once 'config.php';
         <div class="container">
             <div class="row align-items-center min-vh-80">
                 <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold mb-4">Discover <span class="text-primary">Unique Clothing</span> from Talented Tailors Worldwide</h1>
+                    <h1 class="mb-3">
+                        <?php echo $category ? ($categories[$category]['name'] ?? 'Products') : 'All Products'; ?>
+                    </h1>
                     <p class="lead mb-4">Find custom-made traditional and modern outfits from independent tailors across the globe. Connect directly with artisans for personalized designs.</p>
                     <div class="d-flex flex-wrap gap-3">
-                        <a href="<?php echo SITE_URL; ?>/pages/products/" class="btn btn-primary btn-lg px-4">
+                        <a href="<?php echo SITE_URL; ?>/pages/products/index.php" class="btn btn-primary btn-lg px-4">
                             <i class="bi bi-bag me-2"></i> Shop Now
                         </a>
                         <a href="<?php echo SITE_URL; ?>/pages/auth/register.php?type=tailor" class="btn btn-outline-primary btn-lg px-4">
@@ -32,11 +39,12 @@ require_once 'config.php';
                         </a>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <img src="<?php echo SITE_URL; ?>/assets/images/banners/hero.jpg" 
-                         alt="Fashion Models" 
-                         class="img-fluid rounded-3 shadow-lg animate-float"
-                         style="animation-delay: 0.2s;">
+
+                <div class="col-lg-6 d-flex align-items-center justify-content-center">
+                    <img src="<?php echo SITE_URL; ?>/assets/images/banner/image1.webp" 
+                        alt="Fashion Models" 
+                        class="img-fluid rounded-3 shadow-lg animate-float highlighted-image"
+                        style="animation-delay: 0.2s; width: 220%; max-width: 300px; height: auto; transform: scale(1.1); margin-left: -20px;">
                 </div>
             </div>
         </div>
@@ -87,7 +95,7 @@ require_once 'config.php';
                 <div class="col-md-3">
                     <a href="<?php echo SITE_URL; ?>/pages/products/?category=traditional" class="category-card">
                         <div class="card border-0 shadow-sm h-100 hover-lift">
-                            <img src="<?php echo SITE_URL; ?>/assets/images/categories/traditional.jpg" 
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/images (2).jpeg"
                                  class="card-img-top" 
                                  alt="Traditional Clothing"
                                  style="height: 250px; object-fit: cover;">
@@ -101,10 +109,10 @@ require_once 'config.php';
                 <div class="col-md-3">
                     <a href="<?php echo SITE_URL; ?>/pages/products/?category=modern" class="category-card">
                         <div class="card border-0 shadow-sm h-100 hover-lift">
-                            <img src="<?php echo SITE_URL; ?>/assets/images/categories/modern.jpg" 
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/image5.jpeg"
                                  class="card-img-top" 
                                  alt="Modern Fashion"
-                                 style="height: 250px; object-fit: cover;">
+                                 style="height: 260px; object-fit: cover;">
                             <div class="card-body text-center">
                                 <h5 class="fw-bold mb-2">Modern</h5>
                                 <p class="text-muted mb-0">Contemporary fashion trends</p>
@@ -115,10 +123,10 @@ require_once 'config.php';
                 <div class="col-md-3">
                     <a href="<?php echo SITE_URL; ?>/pages/products/?category=formal" class="category-card">
                         <div class="card border-0 shadow-sm h-100 hover-lift">
-                            <img src="<?php echo SITE_URL; ?>/assets/images/categories/formal.jpg" 
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/image7.jpeg" 
                                  class="card-img-top" 
                                  alt="Formal Wear"
-                                 style="height: 250px; object-fit: cover;">
+                                 style="height: 280px; object-fit: cover;">
                             <div class="card-body text-center">
                                 <h5 class="fw-bold mb-2">Formal</h5>
                                 <p class="text-muted mb-0">Elegant and sophisticated attire</p>
@@ -129,10 +137,10 @@ require_once 'config.php';
                 <div class="col-md-3">
                     <a href="<?php echo SITE_URL; ?>/pages/products/?category=custom" class="category-card">
                         <div class="card border-0 shadow-sm h-100 hover-lift">
-                            <img src="<?php echo SITE_URL; ?>/assets/images/categories/custom.jpg" 
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/image3.jpeg" 
                                  class="card-img-top" 
                                  alt="Custom Designs"
-                                 style="height: 250px; object-fit: cover;">
+                                 style="height: 280px; object-fit: cover;">
                             <div class="card-body text-center">
                                 <h5 class="fw-bold mb-2">Custom</h5>
                                 <p class="text-muted mb-0">Personalized designs just for you</p>
@@ -158,29 +166,63 @@ require_once 'config.php';
             </div>
             
             <div class="row" id="featured-products">
-                <!-- Products will be loaded via AJAX -->
-                <div class="col-md-3 mb-4">
-                    <div class="card product-card border-0 shadow-sm h-100">
-                        <div class="product-badge">Popular</div>
-                        <img src="<?php echo SITE_URL; ?>/assets/images/products/featured1.jpg" 
-                             class="card-img-top" 
-                             alt="Product"
-                             style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-2">Traditional Nigerian Agbada</h5>
-                            <p class="text-muted small mb-2">Hand-embroidered with golden thread</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="h5 text-primary mb-0">$299.99</span>
-                                <div class="text-warning">
-                                    <i class="bi bi-star-fill"></i>
-                                    <span class="ms-1">4.8</span>
+
+                    <div class="col-md-3 mb-4">
+                        <div class="card product-card border-0 shadow-sm h-100">
+                            <div class="product-badge" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; z-index: 10;">Popular</div>
+                            
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/image11.jpeg" 
+                                class="card-img-top" 
+                                alt="Product"
+                                style="height: 220px; object-fit: cover;">
+                            
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-2">Traditional Nigerian Agbada</h5>
+                                <p class="text-muted small mb-3">Hand-embroidered with golden thread</p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <span class="h5 text-primary fw-bold mb-0">50,000 CFA</span>
+                                    <div class="text-warning">
+                                        <i class="bi bi-star-fill"></i>
+                                        <span class="ms-1 text-dark small">4.8</span>
+                                    </div>
                                 </div>
                             </div>
+
+                            <div class="card-footer bg-white border-0 p-4 pt-0">
+                                <a href="<?php echo SITE_URL; ?>/pages/products/view.php?id=1" class="btn btn-primary w-100 py-2">
+                                    <i class="bi bi-eye me-2"></i> View Details
+                                </a>
+                            </div>
                         </div>
-                        <div class="card-footer bg-white border-0">
-                            <a href="<?php echo SITE_URL; ?>/pages/products/view.php?id=1" class="btn btn-primary w-100">
-                                <i class="bi bi-eye me-2"></i> View Details
-                            </a>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <div class="card product-card border-0 shadow-sm h-100">
+                            
+                            <img src="<?php echo SITE_URL; ?>/assets/images/products/image12.jpg" 
+                                class="card-img-top" 
+                                alt="Product"
+                                style="height: 220px; object-fit: cover;">
+                            
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-2">Traditional Nigerien Loincloths</h5>
+                                <p class="text-muted small mb-3">Hand-embroidered with golden thread</p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <span class="h5 text-primary fw-bold mb-0">9,000 CFA</span>
+                                    <div class="text-warning">
+                                        <i class="bi bi-star-fill"></i>
+                                        <span class="ms-1 text-dark small">4.8</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-footer bg-white border-0 p-4 pt-0">
+                                <a href="<?php echo SITE_URL; ?>/pages/products/view.php?id=2" class="btn btn-primary w-100 py-2">
+                                    <i class="bi bi-eye me-2"></i> View Details
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -387,6 +429,17 @@ require_once 'config.php';
             font-weight: 600;
             z-index: 1;
         }
+
+        #featured-products .product-card {
+            min-width: 250px; /* Prevents the card from ever getting too thin */
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        #featured-products .card-body {
+            display: flex;
+            flex-direction: column;
+        }
         
         .category-card {
             text-decoration: none;
@@ -479,7 +532,6 @@ require_once 'config.php';
             }
         }
     </style>
-    
     <script>
         $(document).ready(function() {
             // Load featured products via AJAX
@@ -504,9 +556,11 @@ require_once 'config.php';
                                                  style="height: 200px; object-fit: cover;">
                                             <div class="card-body">
                                                 <h5 class="fw-bold mb-2">${product.title}</h5>
-                                                <p class="text-muted small mb-2">${product.tailor_name}</p>
+                                                <p class="text-muted small mb-2">${product.tailor_name || 'Professional Tailor'}</p> 
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="h5 text-primary mb-0">$${product.price}</span>
+                                                    <h1 class="mb-3">
+                                                        <?php echo $category ? ($categories[$category]['name'] ?? 'Products') : 'All Products'; ?>
+                                                    </h1>
                                                     <div class="text-warning">
                                                         <i class="bi bi-star-fill"></i>
                                                         <span class="ms-1">${product.rating}</span>
@@ -558,7 +612,7 @@ require_once 'config.php';
                     $(this).css('transform', 'translateY(0)');
                 }
             );
-            
+             
             // Newsletter subscription
             $('#newsletterForm').submit(function(e) {
                 e.preventDefault();
@@ -586,75 +640,3 @@ require_once 'config.php';
 </body>
 </html>
 
-
-<?php
-/*require_once 'config.php';
-require_once 'includes/components/navbar.php';
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - <?php echo SITE_NAME; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/main.css">
-</head>
-<body>
-    <?php include 'includes/components/navbar.php'; ?>
-    
-    <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h1 class="display-4 fw-bold">Discover Unique Clothing from Farha Service Electro - outure and his Talented Tailors Worldwide</h1>
-                    <p class="lead">Find custom-made traditional and modern outfits from independent tailors across the globe.</p>
-                    <a href="pages/products/" class="btn btn-primary btn-lg">Shop Now</a>
-                    <a href="pages/auth/register.php?type=tailor" class="btn btn-outline-primary btn-lg ms-2">Become a Tailor</a>
-                </div>
-                <div class="col-md-6">
-                    <img src="<?php echo SITE_URL; ?>/assets/images/banners/hero-bg.jpg" alt="Fashion" class="img-fluid rounded">
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Featured Categories -->
-    <section class="categories-section py-5">
-        <div class="container">
-            <h2 class="text-center mb-5">Browse by Category</h2>
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <div class="card category-card">
-                        <img src="<?php echo SITE_URL; ?>/assets/images/categories/traditional.jpg" class="card-img-top" alt="Traditional">
-                        <div class="card-body">
-                            <h5 class="card-title">Traditional</h5>
-                            <p class="card-text">Cultural outfits from around the world</p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Add more categories -->
-            </div>
-        </div>
-    </section>
-    
-    <!-- Featured Products -->
-    <section class="products-section py-5 bg-light">
-        <div class="container">
-            <h2 class="text-center mb-5">Featured Products</h2>
-            <div class="row" id="featured-products">
-                <!-- Products will be loaded via AJAX -->
-            </div>
-        </div>
-    </section>
-    
-    <?php include 'includes/components/footer.php'; ?>
-    
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo SITE_URL; ?>/assets/js/main.js"></script>
-</body>
-</html>
-*/

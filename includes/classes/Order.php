@@ -1,143 +1,217 @@
-// Get completed orders count
-public function getCompletedOrdersCount($tailorId) {
-    $this->db->query("SELECT COUNT(*) as count FROM orders WHERE tailor_id = :tailor_id AND status = 'completed'");
-    $this->db->bind(':tailor_id', $tailorId);
-    $result = $this->db->single();
-    return $result['count'] ?? 0;
-}
-
-// Get total revenue by tailor
-public function getTotalRevenueByTailor($tailorId) {
-    $this->db->query("SELECT SUM(total_amount) as revenue FROM orders WHERE tailor_id = :tailor_id AND payment_status = 'paid'");
-    $this->db->bind(':tailor_id', $tailorId);
-    $result = $this->db->single();
-    return $result['revenue'] ?? 0;
-}
-
-// Get recent orders by tailor
-public function getRecentOrdersByTailor($tailorId, $limit = 5) {
-    $this->db->query("SELECT o.*, u.full_name as customer_name, u.profile_pic as customer_pic 
-                     FROM orders o 
-                     JOIN users u ON o.customer_id = u.id 
-                     WHERE o.tailor_id = :tailor_id 
-                     ORDER BY o.created_at DESC 
-                     LIMIT :limit");
-    $this->db->bind(':tailor_id', $tailorId);
-    $this->db->bind(':limit', $limit);
-    return $this->db->resultSet();
-}
-
-// Get total count by tailor
-public function getTotalCountByTailor($tailorId) {
-    $this->db->query("SELECT COUNT(*) as count FROM products WHERE tailor_id = :tailor_id AND status = 'active'");
-    $this->db->bind(':tailor_id', $tailorId);
-    $result = $this->db->single();
-    return $result['count'] ?? 0;
-}
-
-// Get low stock products
-public function getLowStockProducts($tailorId, $limit = 5) {
-    $this->db->query("SELECT * FROM products WHERE tailor_id = :tailor_id AND stock <= 5 AND status = 'active' ORDER BY stock ASC LIMIT :limit");
-    $this->db->bind(':tailor_id', $tailorId);
-    $this->db->bind(':limit', $limit);
-    return $this->db->resultSet();
-}
-// Get recent messages for tailor
-public function getRecentMessages($tailorId, $limit = 5) {
-    $this->db->query("SELECT m.*, u.full_name as sender_name, u.profile_pic 
-                     FROM messages m 
-                     JOIN users u ON m.sender_id = u.id 
-                     WHERE m.receiver_id = :tailor_id 
-                     ORDER BY m.created_at DESC 
-                     LIMIT :limit");
-    $this->db->bind(':tailor_id', $tailorId);
-    $this->db->bind(':limit', $limit);
-    return $this->db->resultSet();
-}
-
-
-// Get tailor orders with filters
-public function getTailorOrders($tailorId, $status = '', $search = '', $page = 1, $perPage = 10) {
-    $where = "WHERE o.tailor_id = :tailor_id";
-    $params = [':tailor_id' => $tailorId];
+includes/classes/Order.php:
+php
+<?php
+class Order {
+    private $db;
     
-    if ($status) {
-        $where .= " AND o.status = :status";
-        $params[':status'] = $status;
+    public function __construct() {
+        $this->db = Database::getInstance();
     }
     
-    if ($search) {
-        $where .= " AND (o.order_number LIKE :search OR u.full_name LIKE :search OR u.email LIKE :search)";
-        $params[':search'] = "%$search%";
+    // Get all orders for a tailor
+    public function getOrdersByTailor($tailorId, $status = null, $limit = null) {
+        $sql = "SELECT o.*, u.full_name as customer_name, u.email as customer_email 
+                FROM orders o 
+                LEFT JOIN users u ON o.customer_id = u.id 
+                WHERE o.tailor_id = :tailor_id";
+        
+        if ($status) {
+            $sql .= " AND o.status = :status";
+        }
+        
+        $sql .= " ORDER BY o.created_at DESC";
+        
+        if ($limit) {
+            $sql .= " LIMIT :limit";
+        }
+        
+        $this->db->query($sql);
+        $this->db->bind(':tailor_id', $tailorId);
+        
+        if ($status) {
+            $this->db->bind(':status', $status);
+        }
+        
+        if ($limit) {
+            $this->db->bind(':limit', $limit);
+        }
+        
+        return $this->db->resultSet();
     }
     
-    $offset = ($page - 1) * $perPage;
-    
-    $query = "SELECT o.*, u.full_name as customer_name, u.email as customer_email 
-             FROM orders o 
-             JOIN users u ON o.customer_id = u.id 
-             $where 
-             ORDER BY o.created_at DESC 
-             LIMIT :limit OFFSET :offset";
-    
-    $this->db->query($query);
-    
-    foreach ($params as $key => $value) {
-        $this->db->bind($key, $value);
+    // Get single order with details
+    public function getOrderById($orderId, $tailorId = null) {
+        $sql = "SELECT o.*, u.full_name as customer_name, u.email as customer_email, 
+                       u.phone as customer_phone, u.address as customer_address
+                FROM orders o 
+                LEFT JOIN users u ON o.customer_id = u.id 
+                WHERE o.id = :order_id";
+        
+        if ($tailorId) {
+            $sql .= " AND o.tailor_id = :tailor_id";
+        }
+        
+        $this->db->query($sql);
+        $this->db->bind(':order_id', $orderId);
+        
+        if ($tailorId) {
+            $this->db->bind(':tailor_id', $tailorId);
+        }
+        
+        $order = $this->db->single();
+        
+        if ($order) {
+            // Get order items
+            $this->db->query("SELECT oi.*, p.title, p.images 
+                             FROM order_items oi 
+                             LEFT JOIN products p ON oi.product_id = p.id 
+                             WHERE oi.order_id = :order_id");
+            $this->db->bind(':order_id', $orderId);
+            $order['items'] = $this->db->resultSet();
+            
+            // Get order status history
+            $this->db->query("SELECT * FROM order_status_history 
+                             WHERE order_id = :order_id 
+                             ORDER BY created_at DESC");
+            $this->db->bind(':order_id', $orderId);
+            $order['status_history'] = $this->db->resultSet();
+        }
+        
+        return $order;
     }
     
-    $this->db->bind(':limit', $perPage);
-    $this->db->bind(':offset', $offset);
+    // Update order status
+    public function updateOrderStatus($orderId, $status, $notes = null) {
+        try {
+            // Begin transaction
+            $this->db->beginTransaction();
+            
+            // Update order status
+            $this->db->query("UPDATE orders SET status = :status, updated_at = NOW() WHERE id = :id");
+            $this->db->bind(':status', $status);
+            $this->db->bind(':id', $orderId);
+            $this->db->execute();
+            
+            // Add to status history
+            $this->db->query("INSERT INTO order_status_history (order_id, status, notes, created_at) 
+                             VALUES (:order_id, :status, :notes, NOW())");
+            $this->db->bind(':order_id', $orderId);
+            $this->db->bind(':status', $status);
+            $this->db->bind(':notes', $notes);
+            $this->db->execute();
+            
+            // Commit transaction
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
     
-    return $this->db->resultSet();
+    // Get total orders count
+    public function getTotalOrdersByTailor($tailorId) {
+        $this->db->query("SELECT COUNT(*) as total FROM orders WHERE tailor_id = :tailor_id");
+        $this->db->bind(':tailor_id', $tailorId);
+        $result = $this->db->single();
+        return $result['total'] ?? 0;
+    }
+    
+    // Get pending orders count
+    public function getPendingOrdersCount($tailorId) {
+        $this->db->query("SELECT COUNT(*) as count FROM orders WHERE tailor_id = :tailor_id AND status = 'pending'");
+        $this->db->bind(':tailor_id', $tailorId);
+        $result = $this->db->single();
+        return $result['count'] ?? 0;
+    }
+    
+    // Get completed orders count
+    public function getCompletedOrdersCount($tailorId) {
+        $this->db->query("SELECT COUNT(*) as count FROM orders WHERE tailor_id = :tailor_id AND status = 'completed'");
+        $this->db->bind(':tailor_id', $tailorId);
+        $result = $this->db->single();
+        return $result['count'] ?? 0;
+    }
+    
+    // Get total revenue
+    public function getTotalRevenueByTailor($tailorId) {
+        $this->db->query("SELECT SUM(total_amount) as revenue FROM orders WHERE tailor_id = :tailor_id AND status = 'completed'");
+        $this->db->bind(':tailor_id', $tailorId);
+        $result = $this->db->single();
+        return $result['revenue'] ?? 0;
+    }
+    
+    // Get recent orders
+    public function getRecentOrdersByTailor($tailorId, $limit = 5) {
+        $this->db->query("SELECT o.*, u.full_name as customer_name 
+                         FROM orders o 
+                         LEFT JOIN users u ON o.customer_id = u.id 
+                         WHERE o.tailor_id = :tailor_id 
+                         ORDER BY o.created_at DESC 
+                         LIMIT :limit");
+        $this->db->bind(':tailor_id', $tailorId);
+        $this->db->bind(':limit', $limit);
+        return $this->db->resultSet();
+    }
+    
+    // Get orders statistics by month
+    public function getOrdersStatistics($tailorId, $months = 6) {
+        $this->db->query("
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                COUNT(*) as order_count,
+                SUM(total_amount) as revenue,
+                AVG(total_amount) as average_order_value
+            FROM orders 
+            WHERE tailor_id = :tailor_id 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL :months MONTH)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY month DESC
+        ");
+        $this->db->bind(':tailor_id', $tailorId);
+        $this->db->bind(':months', $months);
+        return $this->db->resultSet();
+    }
+    
+    // Search orders
+    public function searchOrders($tailorId, $searchTerm, $status = null) {
+        $sql = "SELECT o.*, u.full_name as customer_name 
+                FROM orders o 
+                LEFT JOIN users u ON o.customer_id = u.id 
+                WHERE o.tailor_id = :tailor_id 
+                AND (o.order_number LIKE :search 
+                     OR u.full_name LIKE :search 
+                     OR u.email LIKE :search)";
+        
+        if ($status) {
+            $sql .= " AND o.status = :status";
+        }
+        
+        $sql .= " ORDER BY o.created_at DESC";
+        
+        $this->db->query($sql);
+        $this->db->bind(':tailor_id', $tailorId);
+        $this->db->bind(':search', '%' . $searchTerm . '%');
+        
+        if ($status) {
+            $this->db->bind(':status', $status);
+        }
+        
+        return $this->db->resultSet();
+    }
+    
+    // Get orders by date range
+    public function getOrdersByDateRange($tailorId, $startDate, $endDate) {
+        $this->db->query("SELECT o.*, u.full_name as customer_name 
+                         FROM orders o 
+                         LEFT JOIN users u ON o.customer_id = u.id 
+                         WHERE o.tailor_id = :tailor_id 
+                         AND DATE(o.created_at) BETWEEN :start_date AND :end_date 
+                         ORDER BY o.created_at DESC");
+        $this->db->bind(':tailor_id', $tailorId);
+        $this->db->bind(':start_date', $startDate);
+        $this->db->bind(':end_date', $endDate);
+        return $this->db->resultSet();
+    }
 }
-
-// Get tailor orders count
-public function getTailorOrdersCount($tailorId, $status = '', $search = '') {
-    $where = "WHERE o.tailor_id = :tailor_id";
-    $params = [':tailor_id' => $tailorId];
-    
-    if ($status) {
-        $where .= " AND o.status = :status";
-        $params[':status'] = $status;
-    }
-    
-    if ($search) {
-        $where .= " AND (o.order_number LIKE :search OR u.full_name LIKE :search OR u.email LIKE :search)";
-        $params[':search'] = "%$search%";
-    }
-    
-    $query = "SELECT COUNT(*) as count 
-             FROM orders o 
-             JOIN users u ON o.customer_id = u.id 
-             $where";
-    
-    $this->db->query($query);
-    
-    foreach ($params as $key => $value) {
-        $this->db->bind($key, $value);
-    }
-    
-    $result = $this->db->single();
-    return $result['count'] ?? 0;
-}
-
-// Update order status
-public function updateStatus($orderId, $status, $notes = '') {
-    $this->db->query("UPDATE orders SET status = :status, notes = CONCAT(notes, '\n', :notes) WHERE id = :id");
-    $this->db->bind(':status', $status);
-    $this->db->bind(':notes', date('Y-m-d H:i:s') . ": Status changed to $status. " . $notes);
-    $this->db->bind(':id', $orderId);
-    return $this->db->execute();
-}
-
-// Get order items
-public function getOrderItems($orderId) {
-    $this->db->query("SELECT oi.*, p.title, p.images, p.tailor_id 
-                     FROM order_items oi 
-                     JOIN products p ON oi.product_id = p.id 
-                     WHERE oi.order_id = :order_id");
-    $this->db->bind(':order_id', $orderId);
-    return $this->db->resultSet();
-}
-
+?>

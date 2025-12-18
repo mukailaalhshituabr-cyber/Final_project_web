@@ -1,18 +1,19 @@
 <?php
 session_start();
+ini_set('memory_limit', '1024M');
 
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('DB_NAME', 'clothing_marketplace');
+define('DB_NAME', 'webtech_2025a_mukaila_shittu');
 
 // Site configuration
-define('SITE_URL', 'http://localhost/webtech/clothing-marketplace');
+define('SITE_URL', 'http://localhost/webtech/clothing-marketplaces');
 define('SITE_NAME', 'Global Clothing Marketplace');
 
-// File upload path
-define('UPLOAD_PATH', $_SERVER['DOCUMENT_ROOT'] . '/clothing-marketplace/assets/uploads/');
+// File upload paths
+define('UPLOAD_PATH', $_SERVER['DOCUMENT_ROOT'] . '/clothing-marketplaces/assets/uploads/');
 define('PRODUCT_IMAGES', 'products/');
 define('PROFILE_IMAGES', 'profile/');
 
