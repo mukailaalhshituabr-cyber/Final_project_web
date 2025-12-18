@@ -25,41 +25,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- CONSOLIDATED PROFILE UPDATE ---
     if (isset($_POST['update_profile'])) {
-        // 1. Define the absolute path clearly
+    // 1. Setup path and ensure folder exists
         $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
         
-        // 2. FORCE permissions on the folder before trying anything
-        if (is_dir($uploadFileDir)) {
-            chmod($uploadFileDir, 0777); // Temporary full access to bypass ownership locks
-        } else {
+        // Attempt to create and open up permissions for the move
+        if (!is_dir($uploadFileDir)) {
             mkdir($uploadFileDir, 0777, true);
         }
+        chmod($uploadFileDir, 0777); 
 
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
-        // 3. Handle File Upload
+        // 2. Handle File Upload (Universal Image Check)
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            $fileExtension = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
-            if (in_array($fileExtension, $allowedExtensions)) {
+            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            $fileName = $_FILES['profile_pic']['name'];
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            // Use getimagesize to check if the file is actually an image, regardless of extension
+            $check = getimagesize($fileTmpPath);
+            
+            if ($check !== false) {
+                // It is an image! Generate a clean, unique name
                 $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
                 $dest_path = $uploadFileDir . $newFileName;
                 
-                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
+                if (move_uploaded_file($fileTmpPath, $dest_path)) {
                     $profile_pic = $newFileName;
-                    // Set the file itself to be readable by the web
-                    chmod($dest_path, 0644); 
+                    chmod($dest_path, 0644); // Make file readable by browser
                 } else {
-                    $last_error = error_get_last();
-                    $error = "Server blocked the move. Reason: " . $last_error['message'];
+                    $error = "The server refused to move the file. Check if folder 'avatars' is set to 777 in cPanel.";
                 }
             } else {
-                $error = "Please upload a valid image (JPG, PNG, or WebP).";
+                $error = "The uploaded file is not a valid image format.";
             }
         }
 
-        // 4. Update the Database
+        // 3. Prepare data and Update Database
         $updateData = [
             'full_name'   => $_POST['full_name'],
             'email'       => $_POST['email'] ?? $userData['email'],
@@ -71,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user->updateProfile($userId, $updateData)) {
             $success = "Profile updated successfully!";
-            $userData = $user->getUserById($userId);
+            $userData = $user->getUserById($userId); // Refresh data
         }
 
-        // 5. SECURE THE FOLDER AGAIN (Set back to standard 755)
+        // Reset folder to safer permissions
         chmod($uploadFileDir, 0755);
     }
     
@@ -308,55 +311,58 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                 <?php endif; ?>
                                 
                                 <form action="profile.php" method="POST" enctype="multipart/form-data">
-                                    <section>
-                                        <div class="row mb-4">
-                                            <div class="col-12">
-                                                <label class="form-label fw-bold">Profile Picture</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text"><i class="bi bi-image"></i></span>
-                                                    <input type="file" class="form-control" name="profile_pic" accept="image/*">
-                                                </div>
-                                                <div class="form-text">Choose a square image for best results (JPG, PNG).</div>
+                                    <input type="hidden" name="current_profile_pic" value="<?php echo htmlspecialchars($userData['profile_pic'] ?? ''); ?>">
+
+                                    <div class="row mb-4">
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold">Profile Picture</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="bi bi-image"></i></span>
+                                                <input type="file" class="form-control" name="profile_pic" accept="image/*">
+                                            </div>
+                                            <div class="form-text text-muted">
+                                                You can upload any image format (JPG, PNG, GIF, WebP). Square images work best.
                                             </div>
                                         </div>
-                                    </section>
+                                    </div>
+
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Full Name *</label>
+                                            <label class="form-label fw-bold">Full Name *</label>
                                             <input type="text" class="form-control" name="full_name" 
-                                                   value="<?php echo htmlspecialchars($userData['full_name']); ?>" required>
+                                                value="<?php echo htmlspecialchars($userData['full_name']); ?>" required>
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Email Address</label>
-                                            <input type="email" class="form-control" 
-                                                   value="<?php echo htmlspecialchars($userData['email']); ?>" readonly>
+                                            <label class="form-label fw-bold">Email Address</label>
+                                            <input type="email" class="form-control bg-light" 
+                                                value="<?php echo htmlspecialchars($userData['email']); ?>" readonly>
                                             <small class="text-muted">Email cannot be changed</small>
                                         </div>
                                     </div>
                                     
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Phone Number</label>
+                                            <label class="form-label fw-bold">Phone Number</label>
                                             <input type="tel" class="form-control" name="phone" 
-                                                   value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>">
+                                                value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>">
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Username</label>
-                                            <input type="text" class="form-control" 
-                                                   value="<?php echo htmlspecialchars($userData['username']); ?>" readonly>
+                                            <label class="form-label fw-bold">Username</label>
+                                            <input type="text" class="form-control bg-light" 
+                                                value="<?php echo htmlspecialchars($userData['username']); ?>" readonly>
                                         </div>
                                     </div>
                                     
-                                    <div class="mb-3">
-                                        <label class="form-label">Address</label>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Address</label>
                                         <textarea class="form-control" name="address" rows="3"><?php echo htmlspecialchars($userData['address'] ?? ''); ?></textarea>
                                     </div>
                                     
                                     <div class="d-flex justify-content-between">
-                                        <button type="submit" name="update_profile" class="btn btn-primary">
+                                        <button type="submit" name="update_profile" class="btn btn-primary px-4">
                                             <i class="bi bi-check-circle me-2"></i> Save Changes
                                         </button>
-                                        <a href="#" class="btn btn-outline-secondary">
+                                        <a href="profile.php" class="btn btn-outline-secondary px-4">
                                             <i class="bi bi-arrow-clockwise me-2"></i> Reset
                                         </a>
                                     </div>
