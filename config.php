@@ -4,12 +4,12 @@ ini_set('memory_limit', '1024M');
 
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'webtech_2025a_mukaila_shittu');
+define('DB_USER', 'mukaila.shittu');
+define('DB_PASS', 'Adf=Tdd3&W');
+define('DB_NAME', 'webtech_2025A_mukaila_shittu');
 
 // Site configuration
-define('SITE_URL', 'http://localhost/webtech/clothing-marketplaces');
+define('SITE_URL', 'http://169.239.251.102:341/~mukaila.shittu/Final_project_web/');
 define('SITE_NAME', 'Global Clothing Marketplace');
 
 // File upload paths
