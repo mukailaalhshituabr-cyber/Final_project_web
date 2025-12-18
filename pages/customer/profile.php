@@ -129,18 +129,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['update_profile'])) {
-        // ... existing name/phone update logic ...
+        $customer_id = $_SESSION['user_id']; // Ensure you have the user's ID
+        
+        // 1. Handle File Upload
+        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === 0) {
+            $upload_dir = "../../assets/images/avatars/";
+            
+            // Security: Validate file type
+            $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
+            $file_type = $_FILES['profile_pic']['type'];
+            
+            if (in_array($file_type, $allowed_types)) {
+                // Create a unique name to prevent overwriting existing files
+                $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
+                $new_file_name = "user_" . $customer_id . "_" . time() . "." . $file_extension;
+                $target_path = $upload_dir . $new_file_name;
 
-        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === 0) {
-            $uploadDir = '../../assets/images/avatars/';
-            $fileName = time() . '_' . $_FILES['profile_image']['name'];
-            $uploadFile = $uploadDir . basename($fileName);
-
-            if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $uploadFile)) {
-                // Update the database with the new $fileName
-                // UPDATE users SET profile_pic = '$fileName' WHERE id = ...
+                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_path)) {
+                    // 2. Update the Database with the new filename
+                    $sql = "UPDATE users SET profile_pic = ? WHERE id = ?";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("si", $new_file_name, $customer_id);
+                    
+                    if ($stmt->execute()) {
+                        $success_msg = "Profile updated successfully!";
+                    } else {
+                        $error_msg = "Database update failed.";
+                    }
+                } else {
+                    $error_msg = "Failed to move uploaded file.";
+                }
+            } else {
+                $error_msg = "Invalid file type. Only JPG and PNG allowed.";
             }
         }
+        
+        // ... logic for updating name/phone can go here ...
     }
 }
 ?>
@@ -321,6 +345,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php endif; ?>
                                 
                                 <form method="POST" enctype="multipart/form-data">
+                                    <section>
+                                        <div class="row mb-4">
+                                            <div class="col-12">
+                                                <label class="form-label fw-bold">Profile Picture</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="bi bi-image"></i></span>
+                                                    <input type="file" class="form-control" name="profile_pic" accept="image/*">
+                                                </div>
+                                                <div class="form-text">Choose a square image for best results (JPG, PNG).</div>
+                                            </div>
+                                        </div>
+                                    </section>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Full Name *</label>
