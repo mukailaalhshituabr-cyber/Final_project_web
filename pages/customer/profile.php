@@ -32,12 +32,46 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_profile'])) {
-        // Update basic profile
-        $fullName = $_POST['full_name'];
-        $phone = $_POST['phone'];
-        $addressText = $_POST['address'];
         
-        if ($user->updateProfile($userId, $fullName, $phone, $addressText)) {
+        // --- IMAGE HANDLING LOGIC START ---
+        // Fallback to existing picture from hidden input or database
+        $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
+
+        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            $fileName = $_FILES['profile_pic']['name'];
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+            
+            if (in_array($fileExtension, $allowedExtensions)) {
+                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
+                $uploadFileDir = '../../assets/images/profiles/';
+                
+                // Create directory if it doesn't exist
+                if (!is_dir($uploadFileDir)) {
+                    mkdir($uploadFileDir, 0755, true);
+                }
+                
+                $dest_path = $uploadFileDir . $newFileName;
+                if (move_uploaded_file($fileTmpPath, $dest_path)) {
+                    $profile_pic = $newFileName;
+                }
+            }
+        }
+
+        // Prepare the data array to fix "string offset" error
+        $updateData = [
+            'full_name'   => $_POST['full_name'],
+            'email'       => $_POST['email'] ?? $userData['email'], // Ensure email is passed
+            'phone'       => $_POST['phone'],
+            'address'     => $_POST['address'],
+            'bio'         => $_POST['bio'] ?? '',
+            'profile_pic' => $profile_pic
+        ];
+        // --- IMAGE HANDLING LOGIC END ---
+
+        // Pass the $userId and the $updateData ARRAY
+        if ($user->updateProfile($userId, $updateData)) {
             $success = "Profile updated successfully!";
             $userData = $user->getUserById($userId); // Refresh data
         } else {
@@ -46,7 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     elseif (isset($_POST['add_address'])) {
-        // Add new address
         $addressData = [
             'label' => $_POST['label'],
             'full_name' => $_POST['full_name'],
@@ -62,14 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($address->addAddress($userId, $addressData)) {
             $success = "Address added successfully!";
-            $addresses = $address->getUserAddresses($userId); // Refresh
+            $addresses = $address->getUserAddresses($userId);
         } else {
             $error = "Failed to add address.";
         }
     }
     
     elseif (isset($_POST['update_measurements'])) {
-        // Update measurements
         $measurementData = [
             'shoulder' => $_POST['shoulder'] ?? '',
             'chest' => $_POST['chest'] ?? '',
