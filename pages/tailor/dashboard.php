@@ -1,3 +1,4 @@
+
 <?php
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
@@ -7,7 +8,9 @@ require_once '../../includes/classes/Product.php';
 require_once '../../includes/classes/Chat.php';
 
 // Check authentication and tailor role
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
     header('Location: ../auth/login.php');
     exit();
@@ -190,12 +193,13 @@ if ($totalProducts === 0 && $totalOrders === 0) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-gradient: linear-gradient(135deg, #eadd66ff 0%, #764ba2 100%);
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
         }
         
         body {
+            padding-top: 93px;
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
@@ -203,7 +207,7 @@ if ($totalProducts === 0 && $totalOrders === 0) {
         }
         
         .dashboard-container {
-            padding: 2rem 0;
+            padding: 20px 0;
         }
         
         /* Sidebar */
