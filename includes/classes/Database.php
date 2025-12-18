@@ -8,7 +8,7 @@ class Database {
     private $pass = DB_PASS;
     private $dbname = DB_NAME;
     
-    private $connection;
+    private $connection; // This is your PDO object
     private $stmt;
     private static $instance = null;
 
@@ -35,12 +35,18 @@ class Database {
         return self::$instance;
     }
 
-    // Core Query Method
+    /**
+     * Core Query Method
+     * This prepares the SQL statement using the PDO connection
+     */
     public function query($sql) {
-        $stmt = $this->db->pdo->prepare($query);
+        // FIXED: Use $this->connection and the correct parameter $sql
+        $this->stmt = $this->connection->prepare($sql);
     }
 
-    // Bind values
+    /**
+     * Bind values to the prepared statement
+     */
     public function bind($param, $value, $type = null) {
         if (is_null($type)) {
             switch (true) {
@@ -53,46 +59,52 @@ class Database {
         $this->stmt->bindValue($param, $value, $type);
     }
 
-    // Execute the prepared statement
+    /**
+     * Execute the prepared statement
+     */
     public function execute() {
-        if (!$this->stmt) return false; // Safety check
+        if (!$this->stmt) return false;
         return $this->stmt->execute();
     }
 
-    // Add this alias so both names work!
-    public function fetchAll() {
-        return $this->resultSet();
-    }
-    // Inside Database.php
-
+    /**
+     * Get result set as array of objects
+     */
     public function resultSet() {
-        if (!$this->stmt) {
-            // This prevents the "on null" error if query() wasn't called
-            return []; 
-        }
         $this->execute();
         return $this->stmt->fetchAll();
     }
 
+    /**
+     * Alias for resultSet
+     */
+    public function fetchAll() {
+        return $this->resultSet();
+    }
+
+    /**
+     * Get single record as object
+     */
     public function single() {
-        if (!$this->stmt) {
-            return null;
-        }
         $this->execute();
         return $this->stmt->fetch();
     }
 
-    // Get row count
     public function rowCount() {
         return $this->stmt->rowCount();
     }
 
-    // Get last inserted ID
     public function lastInsertId() {
         return $this->connection->lastInsertId();
     }
 
-    // --- Helper Logic moved from User class to prevent circular errors ---
+    /**
+     * Added for compatibility: Returns raw PDO connection
+     */
+    public function getConnection() {
+        return $this->connection;
+    }
+
     public function emailExists($email) {
         $this->query("SELECT id FROM users WHERE email = :email");
         $this->bind(':email', $email);
