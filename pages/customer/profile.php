@@ -25,22 +25,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- CONSOLIDATED PROFILE UPDATE ---
     if (isset($_POST['update_profile'])) {
+        // 1. Define the absolute path clearly
+        $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
+        
+        // 2. FORCE permissions on the folder before trying anything
+        if (is_dir($uploadFileDir)) {
+            chmod($uploadFileDir, 0777); // Temporary full access to bypass ownership locks
+        } else {
+            mkdir($uploadFileDir, 0777, true);
+        }
+
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
+        // 3. Handle File Upload
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
-            
-            // 1. If folder doesn't exist, PHP creates it (PHP becomes the OWNER)
-            if (!is_dir($uploadFileDir)) {
-                mkdir($uploadFileDir, 0755, true);
-            }
-
-            // 2. Final check: Is it writable?
-            if (!is_writable($uploadFileDir)) {
-                // Force permissions via PHP if it's locked
-                chmod($uploadFileDir, 0755);
-            }
-
             $fileExtension = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
@@ -50,16 +48,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
                     $profile_pic = $newFileName;
+                    // Set the file itself to be readable by the web
+                    chmod($dest_path, 0644); 
                 } else {
-                    // Check for temporary file issues
-                    $error = "The server could not move the file from temporary storage. Contact host support about 'open_basedir' restrictions.";
+                    $last_error = error_get_last();
+                    $error = "Server blocked the move. Reason: " . $last_error['message'];
                 }
             } else {
                 $error = "Please upload a valid image (JPG, PNG, or WebP).";
             }
         }
 
-        // Update the data array
+        // 4. Update the Database
         $updateData = [
             'full_name'   => $_POST['full_name'],
             'email'       => $_POST['email'] ?? $userData['email'],
@@ -73,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Profile updated successfully!";
             $userData = $user->getUserById($userId);
         }
+
+        // 5. SECURE THE FOLDER AGAIN (Set back to standard 755)
+        chmod($uploadFileDir, 0755);
     }
     
     // --- ADDRESS HANDLING ---
