@@ -28,21 +28,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            // Use the exact path from your error message
             $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
             
+            // 1. If folder doesn't exist, PHP creates it (PHP becomes the OWNER)
+            if (!is_dir($uploadFileDir)) {
+                mkdir($uploadFileDir, 0755, true);
+            }
+
+            // 2. Final check: Is it writable?
+            if (!is_writable($uploadFileDir)) {
+                // Force permissions via PHP if it's locked
+                chmod($uploadFileDir, 0755);
+            }
+
             $fileExtension = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
             if (in_array($fileExtension, $allowedExtensions)) {
-                // Unique filename to prevent cache issues and overwriting
                 $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
                 $dest_path = $uploadFileDir . $newFileName;
                 
                 if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
                     $profile_pic = $newFileName;
                 } else {
-                    $error = "Upload failed. Folder might be locked by server security.";
+                    // Check for temporary file issues
+                    $error = "The server could not move the file from temporary storage. Contact host support about 'open_basedir' restrictions.";
                 }
             } else {
                 $error = "Please upload a valid image (JPG, PNG, or WebP).";
@@ -294,7 +304,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                     </div>
                                 <?php endif; ?>
                                 
-                                <form method="POST" enctype="multipart/form-data">
+                                <form action="profile.php" method="POST" enctype="multipart/form-data">
                                     <section>
                                         <div class="row mb-4">
                                             <div class="col-12">
