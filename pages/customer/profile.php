@@ -30,12 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            // Use absolute path relative to this file
-            $uploadFileDir = __DIR__ . '/../../assets/images/avatars/';
+            // 1. Get the absolute path and clean it
+            $relative_path = '../../assets/images/avatars/';
+            $uploadFileDir = realpath(__DIR__ . '/' . $relative_path) . '/';
             
-            // Create directory if it doesn't exist
-            if (!is_dir($uploadFileDir)) {
-                mkdir($uploadFileDir, 0755, true);
+            // 2. If realpath failed (folder doesn't exist), try to create it
+            if (!$uploadFileDir) {
+                $uploadFileDir = __DIR__ . '/../../assets/images/avatars/';
+                if (!is_dir($uploadFileDir)) {
+                    mkdir($uploadFileDir, 0755, true);
+                }
             }
 
             $fileName = $_FILES['profile_pic']['name'];
@@ -43,17 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
             if (in_array($fileExtension, $allowedExtensions)) {
-                // Generate unique name
                 $newFileName = "user_" . $userId . "_" . time() . '.' . $fileExtension;
                 $dest_path = $uploadFileDir . $newFileName;
                 
+                // Debugging: This will show you exactly where it's trying to save if it fails
                 if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
                     $profile_pic = $newFileName;
                 } else {
-                    $error = "File upload failed. Check folder permissions (755).";
+                    $error = "Permission Denied: Server cannot write to " . $uploadFileDir;
                 }
             } else {
-                $error = "Invalid file type. Please upload JPG, PNG, or WebP.";
+                $error = "Invalid file type.";
             }
         }
 
