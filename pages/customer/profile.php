@@ -1,141 +1,233 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/User.php';
-require_once '../../includes/classes/Address.php';
-
-// Tell PHP to use your own local folder for temp uploads
-$local_tmp = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/tmp';
-if (!is_dir($local_tmp)) mkdir($local_tmp, 0777, true);
-ini_set('upload_tmp_dir', $local_tmp);
+// Start session at the very beginning
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Security check - must be logged in as customer
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     header('Location: ../auth/login.php');
     exit();
 }
+
+require_once '../../config.php';
+require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/User.php';
+require_once '../../includes/classes/Address.php';
 
 $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 $user = new User();
 $address = new Address();
 
-// Get initial user data
+// Define upload paths with correct permissions handling
+$uploadBaseDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/';
+$avatarDir = $uploadBaseDir . 'avatars/';
+$tempDir = $uploadBaseDir . 'tmp/';
+
+// Ensure directories exist with proper permissions
+$directories = [$avatarDir, $tempDir];
+foreach ($directories as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    // Set correct permissions (only if we can)
+    @chmod($dir, 0755);
+}
+
+// Set PHP temp directory
+ini_set('upload_tmp_dir', $tempDir);
+
+// Get user data
 $userData = $user->getUserById($userId);
+if (!$userData) {
+    die("User not found.");
+}
+
+// Initialize messages
+$success = $error = '';
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // --- CONSOLIDATED PROFILE UPDATE ---
+    // --- PROFILE UPDATE ---
     if (isset($_POST['update_profile'])) {
-    // 1. Define the absolute path
-        $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
+        $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic'];
         
-        // Initializing the profile_pic variable with existing data
-        $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
-
-        // 2. Handle File Upload
+        // Handle file upload
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            $fileName = $_FILES['profile_pic']['name'];
+            $fileSize = $_FILES['profile_pic']['size'];
+            $fileType = $_FILES['profile_pic']['type'];
             
-            $fileTmpPath   = $_FILES['profile_pic']['tmp_name'];
-            $fileName      = $_FILES['profile_pic']['name'];
+            // Security checks
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $maxFileSize = 5 * 1024 * 1024; // 5MB
+            
+            // Get file extension
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-
-            // Use getimagesize to verify it's a real image (supports JPG, PNG, GIF, WebP, etc.)
-            $imageInfo = getimagesize($fileTmpPath);
             
-            if ($imageInfo !== false) {
-                // Generate a unique name to prevent overwriting and browser caching issues
-                $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
-                $dest_path   = $uploadFileDir . $newFileName;
-                
-                // Note: Ensure the 'avatars' folder is set to 777 in your cPanel File Manager manually
-                if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                    $profile_pic = $newFileName;
-                    
-                    // Optional: Attempt to make the file readable, but wrap in @ to hide warnings if server blocks it
-                    @chmod($dest_path, 0644); 
-                } else {
-                    $error = "The server could not save the image. Please check folder permissions.";
-                }
+            // Validate file
+            if (!in_array($fileExtension, $allowedExtensions)) {
+                $error = "Invalid file type. Allowed: JPG, PNG, GIF, WebP.";
+            } elseif ($fileSize > $maxFileSize) {
+                $error = "File too large. Maximum size is 5MB.";
+            } elseif (!in_array($fileType, $allowedMimeTypes)) {
+                $error = "Invalid file MIME type.";
             } else {
-                $error = "Invalid file type. Please upload an actual image file.";
+                // Verify it's a real image
+                $imageInfo = @getimagesize($fileTmpPath);
+                if ($imageInfo === false) {
+                    $error = "Uploaded file is not a valid image.";
+                } else {
+                    // Generate unique filename
+                    $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
+                    $dest_path = $avatarDir . $newFileName;
+                    
+                    // Sanitize filename
+                    $newFileName = preg_replace("/[^a-zA-Z0-9\._-]/", "", $newFileName);
+                    
+                    // Check if destination directory is writable
+                    if (!is_writable($avatarDir)) {
+                        $error = "Upload directory is not writable. Please contact administrator.";
+                    } else {
+                        // Move uploaded file
+                        if (move_uploaded_file($fileTmpPath, $dest_path)) {
+                            // Set proper permissions
+                            @chmod($dest_path, 0644);
+                            
+                            // Delete old profile picture if not default
+                            $oldProfilePic = $userData['profile_pic'];
+                            if ($oldProfilePic && $oldProfilePic != 'default.jpg' && file_exists($avatarDir . $oldProfilePic)) {
+                                @unlink($avatarDir . $oldProfilePic);
+                            }
+                            
+                            $profile_pic = $newFileName;
+                        } else {
+                            // Detailed error handling
+                            $uploadError = $_FILES['profile_pic']['error'];
+                            $errorMessages = [
+                                0 => 'There was an unexpected upload error.',
+                                1 => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+                                2 => 'The uploaded file exceeds the MAX_FILE_SIZE directive in the HTML form.',
+                                3 => 'The uploaded file was only partially uploaded.',
+                                4 => 'No file was uploaded.',
+                                6 => 'Missing a temporary folder.',
+                                7 => 'Failed to write file to disk.',
+                                8 => 'A PHP extension stopped the file upload.'
+                            ];
+                            $error = $errorMessages[$uploadError] ?? 'File upload failed. Check directory permissions.';
+                        }
+                    }
+                }
             }
         }
-
-        // 3. Prepare data and Update Database
-        $updateData = [
-            'full_name'   => $_POST['full_name'],
-            // Use null coalescing to ensure keys exist
-            'email'       => $_POST['email'] ?? ($userData['email'] ?? ''),
-            'phone'       => $_POST['phone'] ?? '',
-            'address'     => $_POST['address'] ?? '',
-            'bio'         => $_POST['bio'] ?? '',
-            'profile_pic' => $profile_pic
-        ];
-
-        // 4. Execute Update
-        if ($user->updateProfile($userId, $updateData)) {
-            $success = "Profile updated successfully!";
-            $userData = $user->getUserById($userId); // Refresh local data for the form display
-        } else {
-            $error = "Profile update failed in the database.";
+        
+        // Only proceed with database update if no upload error
+        if (empty($error)) {
+            $updateData = [
+                'full_name'   => trim($_POST['full_name']),
+                'phone'       => trim($_POST['phone'] ?? ''),
+                'address'     => trim($_POST['address'] ?? ''),
+                'bio'         => trim($_POST['bio'] ?? ''),
+                'profile_pic' => $profile_pic
+            ];
+            
+            // Validate required fields
+            if (empty($updateData['full_name'])) {
+                $error = "Full name is required.";
+            } elseif ($user->updateProfile($userId, $updateData)) {
+                $success = "Profile updated successfully!";
+                $userData = $user->getUserById($userId); // Refresh data
+            } else {
+                $error = "Profile update failed in the database.";
+            }
         }
     }
     
     // --- ADDRESS HANDLING ---
     elseif (isset($_POST['add_address'])) {
         $addressData = [
-            'label' => $_POST['label'],
-            'full_name' => $_POST['full_name'],
-            'phone' => $_POST['phone'],
-            'address_line1' => $_POST['address_line1'],
-            'address_line2' => $_POST['address_line2'] ?? '',
-            'city' => $_POST['city'],
-            'state' => $_POST['state'],
-            'country' => $_POST['country'],
-            'postal_code' => $_POST['postal_code'],
+            'label' => trim($_POST['label']),
+            'full_name' => trim($_POST['full_name']),
+            'phone' => trim($_POST['phone']),
+            'address_line1' => trim($_POST['address_line1']),
+            'address_line2' => trim($_POST['address_line2'] ?? ''),
+            'city' => trim($_POST['city']),
+            'state' => trim($_POST['state']),
+            'country' => trim($_POST['country']),
+            'postal_code' => trim($_POST['postal_code']),
             'is_default' => isset($_POST['is_default']) ? 1 : 0
         ];
         
-        if ($address->addAddress($userId, $addressData)) {
+        // Validate required fields
+        $required = ['label', 'full_name', 'phone', 'address_line1', 'city', 'state', 'country', 'postal_code'];
+        $missing = [];
+        foreach ($required as $field) {
+            if (empty($addressData[$field])) {
+                $missing[] = $field;
+            }
+        }
+        
+        if (!empty($missing)) {
+            $error = "Missing required fields: " . implode(', ', $missing);
+        } elseif ($address->addAddress($userId, $addressData)) {
             $success = "Address added successfully!";
+        } else {
+            $error = "Failed to add address.";
         }
     }
     
     // --- MEASUREMENTS HANDLING ---
     elseif (isset($_POST['update_measurements'])) {
         $measurementData = [
-            'shoulder' => $_POST['shoulder'] ?? '',
-            'chest' => $_POST['chest'] ?? '',
-            'waist' => $_POST['waist'] ?? '',
-            'hips' => $_POST['hips'] ?? '',
-            'arm_length' => $_POST['arm_length'] ?? '',
-            'inseam' => $_POST['inseam'] ?? '',
-            'neck' => $_POST['neck'] ?? '',
-            'height' => $_POST['height'] ?? '',
-            'weight' => $_POST['weight'] ?? ''
+            'shoulder' => floatval($_POST['shoulder'] ?? 0),
+            'chest' => floatval($_POST['chest'] ?? 0),
+            'waist' => floatval($_POST['waist'] ?? 0),
+            'hips' => floatval($_POST['hips'] ?? 0),
+            'arm_length' => floatval($_POST['arm_length'] ?? 0),
+            'inseam' => floatval($_POST['inseam'] ?? 0),
+            'neck' => floatval($_POST['neck'] ?? 0),
+            'height' => floatval($_POST['height'] ?? 0),
+            'weight' => floatval($_POST['weight'] ?? 0)
         ];
         
-        $db->query("INSERT INTO user_profiles (user_id, measurements) 
-                   VALUES (:user_id, :measurements) 
-                   ON DUPLICATE KEY UPDATE measurements = :measurements, updated_at = NOW()");
-        $db->bind(':user_id', $userId);
-        $db->bind(':measurements', json_encode($measurementData));
-        
-        if ($db->execute()) {
-            $success = "Measurements updated successfully!";
+        try {
+            $db->query("INSERT INTO user_profiles (user_id, measurements) 
+                       VALUES (:user_id, :measurements) 
+                       ON DUPLICATE KEY UPDATE measurements = :measurements2, updated_at = NOW()");
+            $db->bind(':user_id', $userId);
+            $db->bind(':measurements', json_encode($measurementData));
+            $db->bind(':measurements2', json_encode($measurementData));
+            
+            if ($db->execute()) {
+                $success = "Measurements updated successfully!";
+            } else {
+                $error = "Failed to update measurements.";
+            }
+        } catch (Exception $e) {
+            $error = "Database error: " . $e->getMessage();
         }
     }
 }
 
 // Fetch fresh data for display
 $addresses = $address->getUserAddresses($userId);
-$db->query("SELECT * FROM user_profiles WHERE user_id = :user_id");
-$db->bind(':user_id', $userId);
-$userProfile = $db->single();
-$measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}', true) : [];
+
+// Get measurements
+$measurements = [];
+try {
+    $db->query("SELECT * FROM user_profiles WHERE user_id = :user_id");
+    $db->bind(':user_id', $userId);
+    $userProfile = $db->single();
+    if ($userProfile && isset($userProfile['measurements'])) {
+        $measurements = json_decode($userProfile['measurements'], true) ?: [];
+    }
+} catch (Exception $e) {
+    // Silently fail - measurements will just be empty
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -163,12 +255,18 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
             border-radius: 50%;
             border: 4px solid white;
             object-fit: cover;
+            background-color: #f0f0f0;
         }
         
         .nav-pills .nav-link {
             color: #6c757d;
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .nav-pills .nav-link:hover {
+            background-color: #e9ecef;
         }
         
         .nav-pills .nav-link.active {
@@ -193,6 +291,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
             top: 50%;
             transform: translateY(-50%);
             color: #6c757d;
+            pointer-events: none;
         }
         
         .address-card {
@@ -217,6 +316,26 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
             background-color: #667eea;
             color: white;
         }
+        
+        .alert {
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a6fd8;
+            border-color: #5a6fd8;
+        }
     </style>
 </head>
 <body>
@@ -227,25 +346,33 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-2 text-center">
-                    <img src="../../assets/images/avatars/<?php echo $userData['profile_pic'] ?: 'default.jpg'; ?>" 
+                    <?php 
+                    $profileImage = !empty($userData['profile_pic']) ? 
+                        '../../assets/images/avatars/' . htmlspecialchars($userData['profile_pic']) : 
+                        '../../assets/images/avatars/default.jpg';
+                    ?>
+                    <img src="<?php echo $profileImage; ?>" 
                          class="profile-avatar" 
-                         alt="<?php echo htmlspecialchars($userData['full_name']); ?>">
+                         alt="<?php echo htmlspecialchars($userData['full_name']); ?>"
+                         onerror="this.src='../../assets/images/avatars/default.jpg'">
                 </div>
                 <div class="col-md-10">
                     <h1 class="fw-bold mb-2"><?php echo htmlspecialchars($userData['full_name']); ?></h1>
                     <p class="lead mb-3">
                         <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($userData['address'] ?? 'No address added'); ?>
                     </p>
-                    <div class="d-flex gap-3">
+                    <div class="d-flex flex-wrap gap-3">
                         <span class="badge bg-light text-dark">
                             <i class="bi bi-person"></i> Customer Account
                         </span>
                         <span class="badge bg-light text-dark">
                             <i class="bi bi-envelope"></i> <?php echo htmlspecialchars($userData['email']); ?>
                         </span>
+                        <?php if (!empty($userData['phone'])): ?>
                         <span class="badge bg-light text-dark">
-                            <i class="bi bi-telephone"></i> <?php echo htmlspecialchars($userData['phone'] ?? 'Not provided'); ?>
+                            <i class="bi bi-telephone"></i> <?php echo htmlspecialchars($userData['phone']); ?>
                         </span>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -253,6 +380,28 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
     </div>
     
     <div class="container">
+        <?php if (!empty($success) || !empty($error)): ?>
+        <div class="row mb-3">
+            <div class="col-12">
+                <?php if (!empty($success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <?php echo htmlspecialchars($success); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <?php echo htmlspecialchars($error); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="row">
             <!-- Sidebar Navigation -->
             <div class="col-md-3">
@@ -299,21 +448,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                 <h5 class="mb-0"><i class="bi bi-person me-2"></i>Personal Information</h5>
                             </div>
                             <div class="card-body">
-                                <?php if (isset($success)): ?>
-                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                        <?php echo $success; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($error)): ?>
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        <?php echo $error; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <form action="profile.php" method="POST" enctype="multipart/form-data">
+                                <form action="profile.php" method="POST" enctype="multipart/form-data" novalidate>
                                     <input type="hidden" name="current_profile_pic" value="<?php echo htmlspecialchars($userData['profile_pic'] ?? ''); ?>">
 
                                     <div class="row mb-4">
@@ -321,10 +456,11 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label fw-bold">Profile Picture</label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="bi bi-image"></i></span>
-                                                <input type="file" class="form-control" name="profile_pic" accept="image/*">
+                                                <input type="file" class="form-control" name="profile_pic" 
+                                                       accept="image/jpeg,image/png,image/gif,image/webp">
                                             </div>
                                             <div class="form-text text-muted">
-                                                You can upload any image format (JPG, PNG, GIF, WebP). Square images work best.
+                                                Maximum file size: 5MB. Allowed formats: JPG, PNG, GIF, WebP
                                             </div>
                                         </div>
                                     </div>
@@ -334,12 +470,15 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label fw-bold">Full Name *</label>
                                             <input type="text" class="form-control" name="full_name" 
                                                 value="<?php echo htmlspecialchars($userData['full_name']); ?>" required>
+                                            <div class="invalid-feedback">
+                                                Please provide your full name.
+                                            </div>
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Email Address</label>
                                             <input type="email" class="form-control bg-light" 
                                                 value="<?php echo htmlspecialchars($userData['email']); ?>" readonly>
-                                            <small class="text-muted">Email cannot be changed</small>
+                                            <small class="text-muted">Contact support to change email</small>
                                         </div>
                                     </div>
                                     
@@ -347,7 +486,9 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Phone Number</label>
                                             <input type="tel" class="form-control" name="phone" 
-                                                value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>">
+                                                value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>"
+                                                pattern="[0-9+\-\s()]{10,20}"
+                                                title="Enter a valid phone number">
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Username</label>
@@ -399,7 +540,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                                     <p class="mb-1">
                                                         <strong><?php echo htmlspecialchars($addr['full_name']); ?></strong>
                                                     </p>
-                                                    <p class="mb-1">
+                                                    <p class="mb-1 small">
                                                         <?php echo htmlspecialchars($addr['address_line1']); ?><br>
                                                         <?php if ($addr['address_line2']): ?>
                                                             <?php echo htmlspecialchars($addr['address_line2']); ?><br>
@@ -407,7 +548,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                                         <?php echo htmlspecialchars($addr['city']) . ', ' . htmlspecialchars($addr['state']) . ' ' . htmlspecialchars($addr['postal_code']); ?><br>
                                                         <?php echo htmlspecialchars($addr['country']); ?>
                                                     </p>
-                                                    <p class="mb-2">
+                                                    <p class="mb-2 small">
                                                         <i class="bi bi-telephone"></i> <?php echo htmlspecialchars($addr['phone']); ?>
                                                     </p>
                                                     
@@ -466,7 +607,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Height (cm)</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="height" 
-                                                       value="<?php echo $measurements['height'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['height'] ?? ''); ?>" 
+                                                       step="0.1" min="50" max="250">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -474,7 +616,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Weight (kg)</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="weight" 
-                                                       value="<?php echo $measurements['weight'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['weight'] ?? ''); ?>" 
+                                                       step="0.1" min="20" max="200">
                                                 <span class="measurement-unit">kg</span>
                                             </div>
                                         </div>
@@ -486,7 +629,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Shoulder Width</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="shoulder" 
-                                                       value="<?php echo $measurements['shoulder'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['shoulder'] ?? ''); ?>" 
+                                                       step="0.1" min="20" max="80">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -494,7 +638,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Chest/Bust</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="chest" 
-                                                       value="<?php echo $measurements['chest'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['chest'] ?? ''); ?>" 
+                                                       step="0.1" min="50" max="150">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -502,7 +647,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Neck Circumference</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="neck" 
-                                                       value="<?php echo $measurements['neck'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['neck'] ?? ''); ?>" 
+                                                       step="0.1" min="20" max="60">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -514,7 +660,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Waist</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="waist" 
-                                                       value="<?php echo $measurements['waist'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['waist'] ?? ''); ?>" 
+                                                       step="0.1" min="40" max="150">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -522,7 +669,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Hips</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="hips" 
-                                                       value="<?php echo $measurements['hips'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['hips'] ?? ''); ?>" 
+                                                       step="0.1" min="50" max="150">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -530,7 +678,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Arm Length</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="arm_length" 
-                                                       value="<?php echo $measurements['arm_length'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['arm_length'] ?? ''); ?>" 
+                                                       step="0.1" min="20" max="100">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -542,7 +691,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Inseam</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="inseam" 
-                                                       value="<?php echo $measurements['inseam'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['inseam'] ?? ''); ?>" 
+                                                       step="0.1" min="40" max="120">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -550,7 +700,8 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                             <label class="form-label">Thigh Circumference</label>
                                             <div class="measurement-input">
                                                 <input type="number" class="form-control" name="thigh" 
-                                                       value="<?php echo $measurements['thigh'] ?? ''; ?>" step="0.1">
+                                                       value="<?php echo htmlspecialchars($measurements['thigh'] ?? ''); ?>" 
+                                                       step="0.1" min="30" max="80">
                                                 <span class="measurement-unit">cm</span>
                                             </div>
                                         </div>
@@ -578,18 +729,21 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                             <div class="card-body">
                                 <div class="mb-4">
                                     <h6>Change Password</h6>
-                                    <form>
+                                    <form action="../../api/user.php" method="POST">
+                                        <input type="hidden" name="action" value="change_password">
                                         <div class="mb-3">
                                             <label class="form-label">Current Password</label>
-                                            <input type="password" class="form-control">
+                                            <input type="password" class="form-control" name="current_password" required>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">New Password</label>
-                                            <input type="password" class="form-control">
+                                            <input type="password" class="form-control" name="new_password" required 
+                                                   pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                                                   title="Must contain at least 8 characters, including uppercase, lowercase, and number">
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Confirm New Password</label>
-                                            <input type="password" class="form-control">
+                                            <input type="password" class="form-control" name="confirm_password" required>
                                         </div>
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-key me-2"></i> Change Password
@@ -608,15 +762,13 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                                                     <th>Date & Time</th>
                                                     <th>IP Address</th>
                                                     <th>Device</th>
-                                                    <th>Location</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr>
                                                     <td><?php echo date('M d, Y H:i'); ?></td>
-                                                    <td><?php echo $_SERVER['REMOTE_ADDR']; ?></td>
-                                                    <td><?php echo $_SERVER['HTTP_USER_AGENT']; ?></td>
-                                                    <td>Current Location</td>
+                                                    <td><?php echo htmlspecialchars($_SERVER['REMOTE_ADDR']); ?></td>
+                                                    <td><?php echo htmlspecialchars(substr($_SERVER['HTTP_USER_AGENT'], 0, 50)); ?>...</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -648,7 +800,7 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
     <div class="modal fade" id="addAddressModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST">
+                <form method="POST" novalidate>
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Address</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -776,14 +928,12 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
             
             deleteBtn.addEventListener('click', function() {
                 if (confirm('Are you 100% sure? This action is permanent!')) {
-                    // In a real application, you would make an AJAX call here
-                    alert('Account deletion would be processed here.\nIn a real app, this would redirect to deletion endpoint.');
                     window.location.href = '../../api/user.php?action=delete';
                 }
             });
             
             // Form validation
-            const forms = document.querySelectorAll('form');
+            const forms = document.querySelectorAll('form[novalidate]');
             forms.forEach(form => {
                 form.addEventListener('submit', function(e) {
                     if (!this.checkValidity()) {
@@ -793,7 +943,24 @@ $measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}',
                     this.classList.add('was-validated');
                 });
             });
+            
+            // Image preview for profile picture
+            const profilePicInput = document.querySelector('input[name="profile_pic"]');
+            if (profilePicInput) {
+                profilePicInput.addEventListener('change', function(e) {
+                    const file = this.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.querySelector('.profile-avatar');
+                            if (img) {
+                                img.src = e.target.result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
         });
     </script>
 </body>
-</html>
