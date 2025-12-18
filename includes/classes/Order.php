@@ -214,8 +214,9 @@ class Order {
     }
 
     public function getRecentOrders($userId, $limit = 5) {
+        // UPDATED: Changed user_id to customer_id to match your new table
         $this->db->query("SELECT * FROM orders 
-                        WHERE user_id = :user_id 
+                        WHERE customer_id = :user_id 
                         ORDER BY created_at DESC 
                         LIMIT :limit");
         
