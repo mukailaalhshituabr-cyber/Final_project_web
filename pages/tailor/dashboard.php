@@ -199,7 +199,6 @@ if ($totalProducts === 0 && $totalOrders === 0) {
         }
         
         body {
-            padding-top: 93px;
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
