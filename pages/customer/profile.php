@@ -11,73 +11,72 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     header('Location: ../auth/login.php');
     exit();
 }
+
 $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 $user = new User();
 $address = new Address();
 
-// Get user data
+// Get initial user data
 $userData = $user->getUserById($userId);
-
-// Get user addresses
-$addresses = $address->getUserAddresses($userId);
-
-// Get user measurements
-$db->query("SELECT * FROM user_profiles WHERE user_id = :user_id");
-$db->bind(':user_id', $userId);
-$userProfile = $db->single();
-$measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}', true) : [];
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    // --- CONSOLIDATED PROFILE UPDATE ---
     if (isset($_POST['update_profile'])) {
         
-        // --- IMAGE HANDLING LOGIC START ---
-        // Fallback to existing picture from hidden input or database
+        // 1. Determine the image filename
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            // Use absolute path relative to this file
+            $uploadFileDir = __DIR__ . '/../../assets/images/avatars/';
+            
+            // Create directory if it doesn't exist
+            if (!is_dir($uploadFileDir)) {
+                mkdir($uploadFileDir, 0755, true);
+            }
+
             $fileName = $_FILES['profile_pic']['name'];
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
             if (in_array($fileExtension, $allowedExtensions)) {
-                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-                $uploadFileDir = '../../assets/images/profiles/';
-                
-                // Create directory if it doesn't exist
-                if (!is_dir($uploadFileDir)) {
-                    mkdir($uploadFileDir, 0755, true);
-                }
-                
+                // Generate unique name
+                $newFileName = "user_" . $userId . "_" . time() . '.' . $fileExtension;
                 $dest_path = $uploadFileDir . $newFileName;
-                if (move_uploaded_file($fileTmpPath, $dest_path)) {
+                
+                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
                     $profile_pic = $newFileName;
+                } else {
+                    $error = "File upload failed. Check folder permissions (755).";
                 }
+            } else {
+                $error = "Invalid file type. Please upload JPG, PNG, or WebP.";
             }
         }
 
-        // Prepare the data array to fix "string offset" error
+        // 2. Prepare the data array
         $updateData = [
             'full_name'   => $_POST['full_name'],
-            'email'       => $_POST['email'] ?? $userData['email'], // Ensure email is passed
+            'email'       => $_POST['email'] ?? $userData['email'],
             'phone'       => $_POST['phone'],
             'address'     => $_POST['address'],
             'bio'         => $_POST['bio'] ?? '',
             'profile_pic' => $profile_pic
         ];
-        // --- IMAGE HANDLING LOGIC END ---
 
-        // Pass the $userId and the $updateData ARRAY
+        // 3. Update Database
         if ($user->updateProfile($userId, $updateData)) {
             $success = "Profile updated successfully!";
-            $userData = $user->getUserById($userId); // Refresh data
+            $userData = $user->getUserById($userId); // Refresh data for the display
         } else {
-            $error = "Failed to update profile.";
+            $error = "Failed to update profile details in database.";
         }
     }
     
+    // --- ADDRESS HANDLING ---
     elseif (isset($_POST['add_address'])) {
         $addressData = [
             'label' => $_POST['label'],
@@ -94,12 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($address->addAddress($userId, $addressData)) {
             $success = "Address added successfully!";
-            $addresses = $address->getUserAddresses($userId);
-        } else {
-            $error = "Failed to add address.";
         }
     }
     
+    // --- MEASUREMENTS HANDLING ---
     elseif (isset($_POST['update_measurements'])) {
         $measurementData = [
             'shoulder' => $_POST['shoulder'] ?? '',
@@ -121,50 +118,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($db->execute()) {
             $success = "Measurements updated successfully!";
-            $measurements = $measurementData;
-        } else {
-            $error = "Failed to update measurements.";
         }
-    }
-
-    if (isset($_POST['update_profile'])) {
-        $customer_id = $_SESSION['user_id']; // Ensure you have the user's ID
-        
-        // 1. Handle File Upload
-        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === 0) {
-            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/Final_project_web/assets/images/avatars/";            
-            // Security: Validate file type
-            $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
-            $file_type = $_FILES['profile_pic']['type'];
-            
-            if (in_array($file_type, $allowed_types)) {
-                // Create a unique name to prevent overwriting existing files
-                $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
-                $new_file_name = "user_" . $customer_id . "_" . time() . "." . $file_extension;
-                $target_path = $upload_dir . $new_file_name;
-
-                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_path)) {
-                    // 2. Update the Database with the new filename
-                    $sql = "UPDATE users SET profile_pic = ? WHERE id = ?";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("si", $new_file_name, $customer_id);
-                    
-                    if ($stmt->execute()) {
-                        $success_msg = "Profile updated successfully!";
-                    } else {
-                        $error_msg = "Database update failed.";
-                    }
-                } else {
-                    $error_msg = "Failed to move uploaded file.";
-                }
-            } else {
-                $error_msg = "Invalid file type. Only JPG and PNG allowed.";
-            }
-        }
-        
-        // ... logic for updating name/phone can go here ...
     }
 }
+
+// Fetch fresh data for display
+$addresses = $address->getUserAddresses($userId);
+$db->query("SELECT * FROM user_profiles WHERE user_id = :user_id");
+$db->bind(':user_id', $userId);
+$userProfile = $db->single();
+$measurements = $userProfile ? json_decode($userProfile['measurements'] ?? '{}', true) : [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
