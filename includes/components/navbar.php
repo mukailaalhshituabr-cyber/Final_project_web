@@ -155,7 +155,7 @@ if (isset($_SESSION['user_id'])) {
                                 <a class="dropdown-item" href="<?php 
                                     if ($userType == 'customer') echo SITE_URL . '/pages/customer/profile.php';
                                     elseif ($userType == 'tailor') echo SITE_URL . '/pages/tailor/profile.php';
-                                    else echo SITE_URL . '/pages/admin/profile.php';
+                                    else echo SITE_URL . '/pages/tailors/profile.php';
                                 ?>">
                                     <i class="bi bi-person me-2"></i> My Profile
                                 </a>
