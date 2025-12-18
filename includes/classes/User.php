@@ -92,9 +92,20 @@ class User {
     
     // Update profile
     public function updateProfile($id, $data) {
-        $query = "UPDATE users SET full_name = :full_name, email = :email, phone = :phone, 
-                  address = :address, bio = :bio";
+        // 1. SAFETY CHECK: If $data isn't an array, the script will crash.
+        // This prevents the "offset of type string on string" error.
+        if (!is_array($data)) {
+            return false; 
+        }
+
+        $query = "UPDATE users SET 
+                    full_name = :full_name, 
+                    email = :email, 
+                    phone = :phone, 
+                    address = :address, 
+                    bio = :bio";
         
+        // Only update profile_pic if a new one was uploaded
         if (!empty($data['profile_pic'])) {
             $query .= ", profile_pic = :profile_pic";
         }
@@ -103,8 +114,9 @@ class User {
         
         $this->db->query($query);
         
-        $this->db->bind(':full_name', $data['full_name']);
-        $this->db->bind(':email', $data['email']);
+        // 2. BINDING: Ensure keys match your form input names
+        $this->db->bind(':full_name', $data['full_name'] ?? '');
+        $this->db->bind(':email', $data['email'] ?? '');
         $this->db->bind(':phone', $data['phone'] ?? '');
         $this->db->bind(':address', $data['address'] ?? '');
         $this->db->bind(':bio', $data['bio'] ?? '');
@@ -116,6 +128,8 @@ class User {
         
         return $this->db->execute();
     }
+
+    
     
     // Update password
     public function updatePassword($id, $hashedPassword) {
