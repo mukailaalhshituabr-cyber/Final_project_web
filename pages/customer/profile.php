@@ -24,59 +24,51 @@ $userData = $user->getUserById($userId);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- CONSOLIDATED PROFILE UPDATE ---
+  
     if (isset($_POST['update_profile'])) {
-    // 1. Define the absolute path
         $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
         
-        // Initializing the profile_pic variable with existing data
+        // 1. Force the creation of the directory if you deleted it in Step 1
+        // This makes PHP the "Owner" of the folder
+        if (!is_dir($uploadFileDir)) {
+            mkdir($uploadFileDir, 0777, true);
+        }
+
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
-        // 2. Handle File Upload
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            
-            $fileTmpPath   = $_FILES['profile_pic']['tmp_name'];
-            $fileName      = $_FILES['profile_pic']['name'];
-            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            $fileExtension = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
 
-            // Use getimagesize to verify it's a real image (supports JPG, PNG, GIF, WebP, etc.)
-            $imageInfo = getimagesize($fileTmpPath);
-            
-            if ($imageInfo !== false) {
-                // Generate a unique name to prevent overwriting and browser caching issues
+            // Accept any image format
+            if (getimagesize($fileTmpPath)) {
                 $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
-                $dest_path   = $uploadFileDir . $newFileName;
+                $dest_path = $uploadFileDir . $newFileName;
                 
-                // Note: Ensure the 'avatars' folder is set to 777 in your cPanel File Manager manually
+                // 2. Perform the move
                 if (move_uploaded_file($fileTmpPath, $dest_path)) {
                     $profile_pic = $newFileName;
-                    
-                    // Optional: Attempt to make the file readable, but wrap in @ to hide warnings if server blocks it
                     @chmod($dest_path, 0644); 
                 } else {
-                    $error = "The server could not save the image. Please check folder permissions.";
+                    // If it fails here, the host has a hard lock on the directory
+                    $error = "Upload failed. Your hosting provider may have blocked script-based uploads.";
                 }
-            } else {
-                $error = "Invalid file type. Please upload an actual image file.";
             }
         }
 
-        // 3. Prepare data and Update Database
+        // 3. Database Update
         $updateData = [
             'full_name'   => $_POST['full_name'],
-            // Use null coalescing to ensure keys exist
-            'email'       => $_POST['email'] ?? ($userData['email'] ?? ''),
+            'email'       => $_POST['email'] ?? $userData['email'],
             'phone'       => $_POST['phone'] ?? '',
             'address'     => $_POST['address'] ?? '',
             'bio'         => $_POST['bio'] ?? '',
             'profile_pic' => $profile_pic
         ];
 
-        // 4. Execute Update
         if ($user->updateProfile($userId, $updateData)) {
-            $success = "Profile updated successfully!";
-            $userData = $user->getUserById($userId); // Refresh local data for the form display
-        } else {
-            $error = "Profile update failed in the database.";
+            $success = "Profile updated!";
+            $userData = $user->getUserById($userId);
         }
     }
     
