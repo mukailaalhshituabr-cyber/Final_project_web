@@ -1,379 +1,363 @@
-
 <?php
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Get cart count
-$cartCount = 0;
-if (isset($_SESSION['user_id'])) {
-    require_once __DIR__ . '/../classes/Cart.php';
-    $cart = new Cart();
-    $cartCount = $cart->getCartCount($_SESSION['user_id']);
-} elseif (isset($_SESSION['cart'])) {
-    $cartCount = array_sum(array_column($_SESSION['cart'], 'quantity'));
-}
-
-// Get user info if logged in
-$userName = '';
-$userType = '';
-$profilePic = 'default.jpg';
-if (isset($_SESSION['user_id'])) {
-    require_once __DIR__ . '/../classes/User.php';
-    $user = new User();
-    $userData = $user->getUserById($_SESSION['user_id']);
-    if ($userData) {
-        $userName = $userData['full_name'];
-        $userType = $userData['user_type'];
-        $profilePic = $userData['profile_pic'] ?: 'default.jpg';
-    }
-}
+// Determine current year for copyright
+$currentYear = date('Y');
+// Site name from config (if available)
+$siteName = defined('SITE_NAME') ? SITE_NAME : 'Clothing Marketplace';
 ?>
-<!-- Main Navigation -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top" style="z-index: 1030;">
+
+<footer class="footer mt-auto py-5 bg-dark text-white">
     <div class="container">
-        <!-- Logo -->
-        <a class="navbar-brand" href="<?php echo SITE_URL; ?>/index.php">
-            <div class="d-flex align-items-center">
-                <div class="logo-icon" style="
-                    width: 40px;
-                    height: 40px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-radius: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 10px;
-                ">
-                    <i class="bi bi-scissors text-white"></i>
+        <div class="row">
+            <!-- Brand & About Section -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <h5 class="fw-bold mb-3">
+                    <i class="bi bi-shop me-2"></i><?php echo htmlspecialchars($siteName); ?>
+                </h5>
+                <p class="text-muted mb-4">
+                    Connecting customers with expert tailors for custom-made clothing. 
+                    Quality fashion, perfect fit, delivered to your doorstep.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="#" class="text-white text-decoration-none" data-bs-toggle="tooltip" title="Secure Payment">
+                        <i class="bi bi-shield-check fs-5"></i>
+                    </a>
+                    <a href="#" class="text-white text-decoration-none" data-bs-toggle="tooltip" title="Quality Guarantee">
+                        <i class="bi bi-award fs-5"></i>
+                    </a>
+                    <a href="#" class="text-white text-decoration-none" data-bs-toggle="tooltip" title="Fast Delivery">
+                        <i class="bi bi-truck fs-5"></i>
+                    </a>
                 </div>
-                <span class="fw-bold fs-4" style="
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                "><?php echo SITE_NAME; ?></span>
             </div>
-        </a>
 
-        <!-- Mobile Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <!-- Quick Links -->
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Quick Links</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="/index.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-house-door me-2"></i>Home
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/tailor/browse.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-person-badge me-2"></i>Find Tailors
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/how-it-works.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-question-circle me-2"></i>How It Works
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/pricing.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-tag me-2"></i>Pricing
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/contact.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-envelope me-2"></i>Contact Us
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
-        <!-- Main Menu -->
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/index.php">
-                        <i class="bi bi-house me-1"></i> Home
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/products/">
-                        <i class="bi bi-grid me-1"></i> Shop
-                    </a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="categoriesDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-tags me-1"></i> Categories
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/products/?category=traditional">Traditional</a></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/products/?category=modern">Modern</a></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/products/?category=formal">Formal</a></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/products/?category=casual">Casual</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/products/?category=custom">Custom Designs</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/tailor/">
-                        <i class="bi bi-person-badge me-1"></i> For Tailors
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/about.php">
-                        <i class="bi bi-info-circle me-1"></i> About
-                    </a>
-                </li>
-            </ul>
+            <!-- Customer Support -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Customer Support</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="/pages/help/faq.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-question-lg me-2"></i>FAQ
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/help/shipping.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-truck me-2"></i>Shipping & Delivery
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/help/returns.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-arrow-return-left me-2"></i>Returns & Refunds
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/help/privacy.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-shield-lock me-2"></i>Privacy Policy
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="/pages/help/terms.php" class="text-decoration-none text-muted hover-white">
+                            <i class="bi bi-file-text me-2"></i>Terms of Service
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
-            <!-- Right Side Menu -->
-            <div class="d-flex align-items-center">
-                <!-- Search -->
-                <div class="nav-item dropdown me-3">
-                    <a class="nav-link" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-search"></i>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 300px;">
-                        <form action="<?php echo SITE_URL; ?>/pages/products/search.php" method="GET">
-                            <div class="input-group">
-                                <input type="text" class="form-control" name="q" placeholder="Search products..." required>
-                                <button class="btn btn-primary" type="submit">
-                                    <i class="bi bi-search"></i>
-                                </button>
-                            </div>
-                        </form>
+            <!-- Social Media & Contact -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Connect With Us</h6>
+                
+                <!-- Social Media Links -->
+                <div class="mb-4">
+                    <p class="text-muted mb-3">Follow us on social media:</p>
+                    <div class="d-flex gap-3">
+                        <!-- Facebook -->
+                        <a href="https://facebook.com/yourpage" 
+                           target="_blank" 
+                           class="social-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px;"
+                           data-bs-toggle="tooltip" title="Follow on Facebook">
+                            <i class="bi bi-facebook fs-5"></i>
+                        </a>
+                        
+                        <!-- Instagram -->
+                        <a href="https://instagram.com/yourprofile" 
+                           target="_blank" 
+                           class="social-icon bg-instagram text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px; background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D);"
+                           data-bs-toggle="tooltip" title="Follow on Instagram">
+                            <i class="bi bi-instagram fs-5"></i>
+                        </a>
+                        
+                        <!-- Twitter -->
+                        <a href="https://twitter.com/yourhandle" 
+                           target="_blank" 
+                           class="social-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px;"
+                           data-bs-toggle="tooltip" title="Follow on Twitter">
+                            <i class="bi bi-twitter fs-5"></i>
+                        </a>
+                        
+                        <!-- Pinterest -->
+                        <a href="https://pinterest.com/yourprofile" 
+                           target="_blank" 
+                           class="social-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px;"
+                           data-bs-toggle="tooltip" title="Follow on Pinterest">
+                            <i class="bi bi-pinterest fs-5"></i>
+                        </a>
+                        
+                        <!-- YouTube -->
+                        <a href="https://youtube.com/yourchannel" 
+                           target="_blank" 
+                           class="social-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px;"
+                           data-bs-toggle="tooltip" title="Subscribe on YouTube">
+                            <i class="bi bi-youtube fs-5"></i>
+                        </a>
+                        
+                        <!-- LinkedIn -->
+                        <a href="https://linkedin.com/company/yourcompany" 
+                           target="_blank" 
+                           class="social-icon bg-linkedin text-white rounded-circle d-flex align-items-center justify-content-center"
+                           style="width: 40px; height: 40px; background-color: #0077B5;"
+                           data-bs-toggle="tooltip" title="Follow on LinkedIn">
+                            <i class="bi bi-linkedin fs-5"></i>
+                        </a>
                     </div>
                 </div>
-
-                <!-- Cart -->
-                <div class="nav-item me-3 position-relative">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/cart/">
-                        <i class="bi bi-cart3"></i>
-                        <?php if ($cartCount > 0): ?>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                <?php echo $cartCount; ?>
-                            </span>
-                        <?php endif; ?>
-                    </a>
-                </div>
-
-                <!-- User Menu -->
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <img src="<?php echo SITE_URL; ?>/assets/images/avatars/<?php echo $profilePic; ?>" 
-                                 class="rounded-circle" 
-                                 width="32" 
-                                 height="32"
-                                 style="object-fit: cover;">
-                            <span class="ms-2 d-none d-md-inline"><?php echo explode(' ', $userName)[0]; ?></span>
+                
+                <!-- Contact Info -->
+                <div>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-envelope me-2"></i>
+                        <a href="mailto:support@<?php echo isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'example.com'; ?>" 
+                           class="text-decoration-none text-muted hover-white">
+                            support@<?php echo isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'example.com'; ?>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="<?php 
-                                    if ($userType == 'admin') echo SITE_URL . '/pages/admin/dashboard.php';
-                                    elseif ($userType == 'tailor') echo SITE_URL . '/pages/tailor/dashboard.php';
-                                    else echo SITE_URL . '/pages/customer/dashboard.php';
-                                ?>">
-                                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="<?php 
-                                    if ($userType == 'customer') echo SITE_URL . '/pages/customer/profile.php';
-                                    elseif ($userType == 'tailor') echo SITE_URL . '/pages/tailor/profile.php';
-                                    else echo SITE_URL . '/pages/admin/profile.php';
-                                ?>">
-                                    <i class="bi bi-person me-2"></i> My Profile
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/messages.php">
-                                    <i class="bi bi-chat-dots me-2"></i> Messages
-                                    <?php if (isset($unreadCount) && $unreadCount > 0): ?>
-                                        <span class="badge bg-danger float-end"><?php echo $unreadCount; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
-                                    <i class="bi bi-box-arrow-right me-2 text-danger"></i> Logout
-                                </a>
-                            </li>
+                    </p>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-telephone me-2"></i>
+                        <a href="tel:+1234567890" class="text-decoration-none text-muted hover-white">
+                            +1 (234) 567-890
+                        </a>
+                    </p>
+                    <p class="text-muted">
+                        <i class="bi bi-clock me-2"></i>
+                        Mon-Fri: 9AM-6PM
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <hr class="my-4 border-secondary">
+        
+        <!-- Bottom Row -->
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted">
+                    &copy; <?php echo $currentYear; ?> <?php echo htmlspecialchars($siteName); ?>. All rights reserved.
+                </p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="d-flex justify-content-md-end gap-4">
+                    <!-- Payment Methods -->
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="text-muted small me-2">We accept:</span>
+                        <i class="bi bi-credit-card text-muted" title="Credit Cards"></i>
+                        <i class="bi bi-paypal text-muted" title="PayPal"></i>
+                        <i class="bi bi-bank text-muted" title="Bank Transfer"></i>
+                    </div>
+                    
+                    <!-- Language/Currency Selector (Optional) -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="bi bi-globe me-1"></i>English
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">English</a></li>
+                            <li><a class="dropdown-item" href="#">French</a></li>
+                            <li><a class="dropdown-item" href="#">Spanish</a></li>
                         </ul>
                     </div>
-                <?php else: ?>
-                    <div class="d-flex gap-2">
-                        <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">
-                            Login
-                        </a>
-                        <a href="<?php echo SITE_URL; ?>/pages/auth/register.php" class="btn btn-primary">
-                            Sign Up
-                        </a>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
+        </div>
+        
+        <!-- Back to Top Button -->
+        <button onclick="scrollToTop()" id="backToTop" class="btn btn-primary rounded-circle position-fixed bottom-3 end-3" 
+                style="width: 50px; height: 50px; display: none; z-index: 1000;">
+            <i class="bi bi-arrow-up"></i>
+        </button>
+
+
+        <!-- Newsletter Subscription -->
+        <div class="col-lg-3 col-md-6 mb-4">
+            <h6 class="fw-bold mb-3">Newsletter</h6>
+            <p class="text-muted small mb-3">
+                Subscribe to get updates on new tailors, promotions, and fashion tips.
+            </p>
+            <form onsubmit="return subscribeNewsletter()" class="newsletter-form">
+                <div class="input-group mb-3">
+                    <input type="email" 
+                        id="newsletterEmail"
+                        class="form-control form-control-sm" 
+                        placeholder="Your email address" 
+                        required>
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="newsletterConsent" required>
+                    <label class="form-check-label text-muted small" for="newsletterConsent">
+                        I agree to receive marketing emails
+                    </label>
+                </div>
+            </form>
         </div>
     </div>
-</nav>
+</footer>
 
-<!-- Add space for fixed navbar -->
-<div style="height: 76px;"></div>
+<!-- JavaScript for footer functionality -->
+<script>
+// Back to top button
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-<!-- Mobile Bottom Navigation (for mobile only) -->
-<div class="d-block d-lg-none fixed-bottom bg-white shadow-lg" style="z-index: 1020;">
-    <div class="container">
-        <div class="row text-center py-2">
-            <div class="col-3">
-                <a href="<?php echo SITE_URL; ?>/index.php" class="text-decoration-none text-dark">
-                    <i class="bi bi-house fs-5"></i>
-                    <div class="small">Home</div>
-                </a>
-            </div>
-            <div class="col-3">
-                <a href="<?php echo SITE_URL; ?>/pages/products/" class="text-decoration-none text-dark">
-                    <i class="bi bi-grid fs-5"></i>
-                    <div class="small">Shop</div>
-                </a>
-            </div>
-            <div class="col-3">
-                <a href="<?php echo SITE_URL; ?>/pages/cart/" class="text-decoration-none text-dark position-relative">
-                    <i class="bi bi-cart3 fs-5"></i>
-                    <?php if ($cartCount > 0): ?>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
-                            <?php echo $cartCount; ?>
-                        </span>
-                    <?php endif; ?>
-                    <div class="small">Cart</div>
-                </a>
-            </div>
-            <div class="col-3">
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="<?php 
-                        if ($userType == 'admin') echo SITE_URL . '/pages/admin/dashboard.php';
-                        elseif ($userType == 'tailor') echo SITE_URL . '/pages/tailor/dashboard.php';
-                        else echo SITE_URL . '/pages/customer/dashboard.php';
-                    ?>" class="text-decoration-none text-dark">
-                        <i class="bi bi-person fs-5"></i>
-                        <div class="small">Profile</div>
-                    </a>
-                <?php else: ?>
-                    <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="text-decoration-none text-dark">
-                        <i class="bi bi-box-arrow-in-right fs-5"></i>
-                        <div class="small">Login</div>
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</div>
+// Show/hide back to top button
+window.onscroll = function() {
+    const backToTopBtn = document.getElementById('backToTop');
+    if (document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
+        backToTopBtn.style.display = 'block';
+    } else {
+        backToTopBtn.style.display = 'none';
+    }
+};
 
-<!-- Toast Notifications Container -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <strong class="me-auto"><?php echo SITE_NAME; ?></strong>
-            <small>Just now</small>
-            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-        </div>
-        <div class="toast-body" id="toastMessage">
-            Hello, world! This is a toast message.
-        </div>
-    </div>
-</div>
+// Tooltip initialization
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 
-<!-- Quick Cart Preview Modal -->
-<div class="modal fade" id="cartPreviewModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-end">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Your Cart</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="cartPreviewContent">
-                <!-- Content loaded via AJAX -->
-            </div>
-            <div class="modal-footer">
-                <a href="<?php echo SITE_URL; ?>/pages/cart/" class="btn btn-outline-primary">View Cart</a>
-                <a href="<?php echo SITE_URL; ?>/pages/cart/checkout.php" class="btn btn-primary">Checkout</a>
-            </div>
-        </div>
-    </div>
-</div>
+// Hover effect for links
+document.addEventListener('DOMContentLoaded', function() {
+    const links = document.querySelectorAll('.hover-white');
+    links.forEach(link => {
+        link.addEventListener('mouseenter', function() {
+            this.classList.add('text-white');
+        });
+        link.addEventListener('mouseleave', function() {
+            this.classList.remove('text-white');
+        });
+    });
+});
+
+// Newsletter subscription (optional)
+function subscribeNewsletter() {
+    const email = document.getElementById('newsletterEmail').value;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address.');
+        return false;
+    }
+    
+    // In a real application, you would send this to your server
+    alert('Thank you for subscribing to our newsletter!');
+    document.getElementById('newsletterEmail').value = '';
+    return false;
+}
+</script>
 
 <style>
-    /* Navbar custom styles */
-    .navbar {
-        backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.95);
-    }
-    
-    .nav-link {
-        font-weight: 500;
-        color: #4a5568;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    .nav-link:hover {
-        color: #667eea;
-        background: rgba(102, 126, 234, 0.1);
-    }
-    
-    .dropdown-menu {
-        border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        border-radius: 15px;
-        padding: 0.5rem;
-    }
-    
-    .dropdown-item {
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem 0;
-    }
-    
-    .dropdown-item:hover {
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
-    }
-    
-    /* Mobile bottom nav */
-    .fixed-bottom {
-        backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.95);
-        border-top: 1px solid rgba(0,0,0,0.1);
-    }
-</style>
+/* Additional CSS for footer */
+.footer {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+}
 
-<script>
-    // Initialize tooltips
-    $(document).ready(function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-        
-        // Cart preview on hover
-        $('#cartPreview').hover(function() {
-            loadCartPreview();
-        }, function() {
-            // Hide after delay
-            setTimeout(function() {
-                if (!$('#cartPreviewModal').is(':hover')) {
-                    $('#cartPreviewModal').modal('hide');
-                }
-            }, 500);
-        });
-        
-        // Load cart preview via AJAX
-        function loadCartPreview() {
-            $.ajax({
-                url: '<?php echo SITE_URL; ?>/api/cart.php?action=preview',
-                success: function(response) {
-                    $('#cartPreviewContent').html(response);
-                    $('#cartPreviewModal').modal('show');
-                }
-            });
-        }
-        
-        // Show toast notification
-        function showToast(message, type = 'info') {
-            const toastEl = document.getElementById('liveToast');
-            const toastBody = document.getElementById('toastMessage');
-            
-            // Set message
-            toastBody.textContent = message;
-            
-            // Set type-specific styling
-            const toast = new bootstrap.Toast(toastEl);
-            toast.show();
-        }
-        
-        // Check for session messages
-        <?php if (isset($_SESSION['success_message'])): ?>
-            showToast("<?php echo addslashes($_SESSION['success_message']); ?>", 'success');
-            <?php unset($_SESSION['success_message']); ?>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error_message'])): ?>
-            showToast("<?php echo addslashes($_SESSION['error_message']); ?>", 'error');
-            <?php unset($_SESSION['error_message']); ?>
-        <?php endif; ?>
-    });
-</script>
+.hover-white {
+    transition: color 0.3s ease;
+}
+
+.hover-white:hover {
+    color: white !important;
+    text-decoration: underline !important;
+}
+
+.social-icon {
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.social-icon:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+#backToTop {
+    transition: all 0.3s ease;
+}
+
+#backToTop:hover {
+    transform: scale(1.1);
+}
+
+.bg-linkedin {
+    background-color: #0077B5 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .footer {
+        text-align: center;
+    }
+    
+    .footer .text-md-end {
+        text-align: center !important;
+    }
+    
+    #backToTop {
+        bottom: 20px;
+        right: 20px;
+        width: 45px;
+        height: 45px;
+    }
+}
+</style>
