@@ -7,12 +7,14 @@ class Cart {
     
     public function __construct() {
 
-        // Ensure Stripe constant exists before trying to use it
-        if (defined('STRIPE_SECRET_KEY')) {
-            // If using Composer:
-            // require_once __DIR__ . '/../../vendor/autoload.php';
-            
-            \Stripe\Stripe::setApiKey(STRIPE_SECRET_KEY);
+        // 1. Check if the Stripe class exists before using it
+        if (class_exists('\Stripe\Stripe')) {
+            if (defined('STRIPE_SECRET_KEY') && !empty(STRIPE_SECRET_KEY)) {
+                \Stripe\Stripe::setApiKey(STRIPE_SECRET_KEY);
+            }
+        } else {
+            // Log error or handle gracefully - this prevents the "Fatal Error"
+            error_log("Stripe library not found in " . __DIR__);
         }
         
         if (session_status() === PHP_SESSION_NONE) {
