@@ -4,13 +4,19 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Get cart count
+// Get cart count - FIXED with safety checks
 $cartCount = 0;
 if (isset($_SESSION['user_id'])) {
-    require_once __DIR__ . '/../classes/Cart.php';
-    $cart = new Cart();
-    $cartCount = $cart->getCartCount($_SESSION['user_id']);
+    // Check if file exists before requiring to prevent fatal error
+    $cartClassPath = __DIR__ . '/../classes/Cart.php';
+    if (file_exists($cartClassPath)) {
+        require_once $cartClassPath;
+        $cart = new Cart();
+        // Use a safe count method that doesn't trigger Stripe
+        $cartCount = $cart->getCartCount(); 
+    }
 } elseif (isset($_SESSION['cart'])) {
+    // Logic for guests (not logged in)
     $cartCount = array_sum(array_column($_SESSION['cart'], 'quantity'));
 }
 
@@ -19,20 +25,21 @@ $userName = '';
 $userType = '';
 $profilePic = 'default.jpg';
 if (isset($_SESSION['user_id'])) {
-    require_once __DIR__ . '/../classes/User.php';
-    $user = new User();
-    $userData = $user->getUserById($_SESSION['user_id']);
-    if ($userData) {
-        $userName = $userData['full_name'];
-        $userType = $userData['user_type'];
-        $profilePic = $userData['profile_pic'] ?: 'default.jpg';
+    $userClassPath = __DIR__ . '/../classes/User.php';
+    if (file_exists($userClassPath)) {
+        require_once $userClassPath;
+        $user = new User();
+        $userData = $user->getUserById($_SESSION['user_id']);
+        if ($userData) {
+            $userName = $userData['full_name'];
+            $userType = $userData['user_type'];
+            $profilePic = $userData['profile_pic'] ?: 'default.jpg';
+        }
     }
 }
 ?>
-<!-- Main Navigation -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top" style="z-index: 1030;">
     <div class="container">
-        <!-- Logo -->
         <a class="navbar-brand" href="<?php echo SITE_URL; ?>/index.php">
             <div class="d-flex align-items-center">
                 <div class="logo-icon" style="
@@ -55,12 +62,10 @@ if (isset($_SESSION['user_id'])) {
             </div>
         </a>
 
-        <!-- Mobile Toggle -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Main Menu -->
         <div class="collapse navbar-collapse" id="navbarMain">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
@@ -98,9 +103,7 @@ if (isset($_SESSION['user_id'])) {
                 </li>
             </ul>
 
-            <!-- Right Side Menu -->
             <div class="d-flex align-items-center">
-                <!-- Search -->
                 <div class="nav-item dropdown me-3">
                     <a class="nav-link" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="bi bi-search"></i>
@@ -117,7 +120,6 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 </div>
 
-                <!-- Cart -->
                 <div class="nav-item me-3 position-relative">
                     <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/cart/">
                         <i class="bi bi-cart3"></i>
@@ -129,7 +131,6 @@ if (isset($_SESSION['user_id'])) {
                     </a>
                 </div>
 
-                <!-- User Menu -->
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <div class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
@@ -177,12 +178,8 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 <?php else: ?>
                     <div class="d-flex gap-2">
-                        <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">
-                            Login
-                        </a>
-                        <a href="<?php echo SITE_URL; ?>/pages/auth/register.php" class="btn btn-primary">
-                            Sign Up
-                        </a>
+                        <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">Login</a>
+                        <a href="<?php echo SITE_URL; ?>/pages/auth/register.php" class="btn btn-primary">Sign Up</a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -190,10 +187,8 @@ if (isset($_SESSION['user_id'])) {
     </div>
 </nav>
 
-<!-- Add space for fixed navbar -->
 <div style="height: 76px;"></div>
 
-<!-- Mobile Bottom Navigation (for mobile only) -->
 <div class="d-block d-lg-none fixed-bottom bg-white shadow-lg" style="z-index: 1020;">
     <div class="container">
         <div class="row text-center py-2">
@@ -241,139 +236,12 @@ if (isset($_SESSION['user_id'])) {
     </div>
 </div>
 
-
-<!-- Toast Notifications Container -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <strong class="me-auto"><?php echo SITE_NAME; ?></strong>
-            <small>Just now</small>
-            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-        </div>
-        <div class="toast-body" id="toastMessage">
-            Hello, world! This is a toast message.
-        </div>
-    </div>
-</div>
-
-<!-- Quick Cart Preview Modal -->
-<div class="modal fade" id="cartPreviewModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-end">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Your Cart</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="cartPreviewContent">
-                <!-- Content loaded via AJAX -->
-            </div>
-            <div class="modal-footer">
-                <a href="<?php echo SITE_URL; ?>/pages/cart/" class="btn btn-outline-primary">View Cart</a>
-                <a href="<?php echo SITE_URL; ?>/pages/cart/checkout.php" class="btn btn-primary">Checkout</a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-    /* Navbar custom styles */
-    .navbar {
-        backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.95);
-    }
-    
-    .nav-link {
-        font-weight: 500;
-        color: #4a5568;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    .nav-link:hover {
-        color: #667eea;
-        background: rgba(102, 126, 234, 0.1);
-    }
-    
-    .dropdown-menu {
-        border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        border-radius: 15px;
-        padding: 0.5rem;
-    }
-    
-    .dropdown-item {
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem 0;
-    }
-    
-    .dropdown-item:hover {
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
-    }
-    
-    /* Mobile bottom nav */
-    .fixed-bottom {
-        backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.95);
-        border-top: 1px solid rgba(0,0,0,0.1);
-    }
+    .navbar { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); }
+    .nav-link { font-weight: 500; color: #4a5568; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s ease; }
+    .nav-link:hover { color: #667eea; background: rgba(102, 126, 234, 0.1); }
+    .dropdown-menu { border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; padding: 0.5rem; }
+    .dropdown-item { border-radius: 8px; padding: 0.5rem 1rem; margin: 0.25rem 0; }
+    .dropdown-item:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+    .fixed-bottom { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); border-top: 1px solid rgba(0,0,0,0.1); }
 </style>
-
-<script>
-    // Initialize tooltips
-    $(document).ready(function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-        
-        // Cart preview on hover
-        $('#cartPreview').hover(function() {
-            loadCartPreview();
-        }, function() {
-            // Hide after delay
-            setTimeout(function() {
-                if (!$('#cartPreviewModal').is(':hover')) {
-                    $('#cartPreviewModal').modal('hide');
-                }
-            }, 500);
-        });
-        
-        // Load cart preview via AJAX
-        function loadCartPreview() {
-            $.ajax({
-                url: '<?php echo SITE_URL; ?>/api/cart.php?action=preview',
-                success: function(response) {
-                    $('#cartPreviewContent').html(response);
-                    $('#cartPreviewModal').modal('show');
-                }
-            });
-        }
-        
-        // Show toast notification
-        function showToast(message, type = 'info') {
-            const toastEl = document.getElementById('liveToast');
-            const toastBody = document.getElementById('toastMessage');
-            
-            // Set message
-            toastBody.textContent = message;
-            
-            // Set type-specific styling
-            const toast = new bootstrap.Toast(toastEl);
-            toast.show();
-        }
-        
-        // Check for session messages
-        <?php if (isset($_SESSION['success_message'])): ?>
-            showToast("<?php echo addslashes($_SESSION['success_message']); ?>", 'success');
-            <?php unset($_SESSION['success_message']); ?>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error_message'])): ?>
-            showToast("<?php echo addslashes($_SESSION['error_message']); ?>", 'error');
-            <?php unset($_SESSION['error_message']); ?>
-        <?php endif; ?>
-    });
-</script>
