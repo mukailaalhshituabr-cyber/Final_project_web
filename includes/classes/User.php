@@ -8,7 +8,6 @@ class User {
     public function __construct() {
         $this->db = new Database(); 
         $this->db = Database::getInstance();
-        
     }
     
     // Register new user
@@ -302,7 +301,6 @@ class User {
     }
 
     public function updateTailorProfile($id, $name, $email, $phone, $address, $bio, $pic) {
-        
         $query = "UPDATE users SET 
                 full_name = :name, 
                 email = :email, 

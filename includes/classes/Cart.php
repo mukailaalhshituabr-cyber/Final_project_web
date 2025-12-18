@@ -6,8 +6,18 @@ class Cart {
     private $secretKey;
     
     public function __construct() {
-        $this->secretKey = STRIPE_SECRET_KEY;
-        \Stripe\Stripe::setApiKey($this->secretKey);
+
+        // Ensure Stripe constant exists before trying to use it
+        if (defined('STRIPE_SECRET_KEY')) {
+            // If using Composer:
+            // require_once __DIR__ . '/../../vendor/autoload.php';
+            
+            \Stripe\Stripe::setApiKey(STRIPE_SECRET_KEY);
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
     
     public function processPayment($data) {
