@@ -4,7 +4,9 @@ require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
 //require_once '../../includes/classes/Address.php';
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     header('Location: ../auth/login.php');
     exit();
