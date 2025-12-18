@@ -1,5 +1,4 @@
-includes/classes/Order.php:
-php
+
 <?php
 class Order {
     private $db;
@@ -211,6 +210,18 @@ class Order {
         $this->db->bind(':tailor_id', $tailorId);
         $this->db->bind(':start_date', $startDate);
         $this->db->bind(':end_date', $endDate);
+        return $this->db->resultSet();
+    }
+
+    public function getRecentOrders($userId, $limit = 5) {
+        $this->db->query("SELECT * FROM orders 
+                        WHERE user_id = :user_id 
+                        ORDER BY created_at DESC 
+                        LIMIT :limit");
+        
+        $this->db->bind(':user_id', $userId);
+        $this->db->bind(':limit', $limit);
+        
         return $this->db->resultSet();
     }
 }
