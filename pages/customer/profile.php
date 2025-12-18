@@ -25,43 +25,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- CONSOLIDATED PROFILE UPDATE ---
     if (isset($_POST['update_profile'])) {
-        
-        // 1. Determine the image filename
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic']; 
 
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            // 1. Get the absolute path and clean it
-            $relative_path = '../../assets/images/avatars/';
-            $uploadFileDir = realpath(__DIR__ . '/' . $relative_path) . '/';
+            // Use the exact path from your error message
+            $uploadFileDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/avatars/';
             
-            // 2. If realpath failed (folder doesn't exist), try to create it
-            if (!$uploadFileDir) {
-                $uploadFileDir = __DIR__ . '/../../assets/images/avatars/';
-                if (!is_dir($uploadFileDir)) {
-                    mkdir($uploadFileDir, 0755, true);
-                }
-            }
-
-            $fileName = $_FILES['profile_pic']['name'];
-            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $fileExtension = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
             
             if (in_array($fileExtension, $allowedExtensions)) {
-                $newFileName = "user_" . $userId . "_" . time() . '.' . $fileExtension;
+                // Unique filename to prevent cache issues and overwriting
+                $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
                 $dest_path = $uploadFileDir . $newFileName;
                 
-                // Debugging: This will show you exactly where it's trying to save if it fails
                 if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $dest_path)) {
                     $profile_pic = $newFileName;
                 } else {
-                    $error = "Permission Denied: Server cannot write to " . $uploadFileDir;
+                    $error = "Upload failed. Folder might be locked by server security.";
                 }
             } else {
-                $error = "Invalid file type.";
+                $error = "Please upload a valid image (JPG, PNG, or WebP).";
             }
         }
 
-        // 2. Prepare the data array
+        // Update the data array
         $updateData = [
             'full_name'   => $_POST['full_name'],
             'email'       => $_POST['email'] ?? $userData['email'],
@@ -71,12 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'profile_pic' => $profile_pic
         ];
 
-        // 3. Update Database
         if ($user->updateProfile($userId, $updateData)) {
             $success = "Profile updated successfully!";
-            $userData = $user->getUserById($userId); // Refresh data for the display
-        } else {
-            $error = "Failed to update profile details in database.";
+            $userData = $user->getUserById($userId);
         }
     }
     
