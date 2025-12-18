@@ -11,7 +11,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     header('Location: ../auth/login.php');
     exit();
 }
-$upload_dir
 $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 $user = new User();
