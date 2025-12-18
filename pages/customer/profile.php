@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     header('Location: ../auth/login.php');
     exit();
 }
-
+$upload_dir
 $userId = $_SESSION['user_id'];
 $db = Database::getInstance();
 $user = new User();
@@ -129,43 +129,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['update_profile'])) {
-        $customer_id = $_SESSION['user_id']; // Ensure you have the user's ID
-        
-        // 1. Handle File Upload
-        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === 0) {
-            $upload_dir = "../../assets/images/avatars/";
-            
-            // Security: Validate file type
-            $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
-            $file_type = $_FILES['profile_pic']['type'];
-            
-            if (in_array($file_type, $allowed_types)) {
-                // Create a unique name to prevent overwriting existing files
-                $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
-                $new_file_name = "user_" . $customer_id . "_" . time() . "." . $file_extension;
-                $target_path = $upload_dir . $new_file_name;
+    $customer_id = $_SESSION['user_id']; 
+    
+    if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === 0) {
+        // Use an absolute path to avoid "Directory not found" errors
+        $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/Final_project_web/assets/images/avatars/";
 
-                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_path)) {
-                    // 2. Update the Database with the new filename
-                    $sql = "UPDATE users SET profile_pic = ? WHERE id = ?";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("si", $new_file_name, $customer_id);
-                    
-                    if ($stmt->execute()) {
-                        $success_msg = "Profile updated successfully!";
-                    } else {
-                        $error_msg = "Database update failed.";
-                    }
-                } else {
-                    $error_msg = "Failed to move uploaded file.";
-                }
+        // Create the directory if it doesn't exist
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+
+        $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
+        $new_file_name = "user_" . $customer_id . "_" . time() . "." . $file_extension;
+        $target_path = $upload_dir . $new_file_name;
+
+        if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_path)) {
+            // Success! Update DB
+            $sql = "UPDATE users SET profile_pic = ? WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("si", $new_file_name, $customer_id);
+            $stmt->execute();
+            
+            echo "Success! Image uploaded.";
+        } else {
+            // Check if it's a permission issue
+            if (!is_writable($upload_dir)) {
+                echo "Error: The server does not have permission to write to the avatars folder.";
             } else {
-                $error_msg = "Invalid file type. Only JPG and PNG allowed.";
+                echo "Error: Upload failed. Check file size limits.";
             }
         }
-        
-        // ... logic for updating name/phone can go here ...
     }
+}
 }
 ?>
 <!DOCTYPE html>
