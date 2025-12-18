@@ -127,6 +127,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Failed to update measurements.";
         }
     }
+
+    if (isset($_POST['update_profile'])) {
+        // ... existing name/phone update logic ...
+
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === 0) {
+            $uploadDir = '../../assets/images/avatars/';
+            $fileName = time() . '_' . $_FILES['profile_image']['name'];
+            $uploadFile = $uploadDir . basename($fileName);
+
+            if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $uploadFile)) {
+                // Update the database with the new $fileName
+                // UPDATE users SET profile_pic = '$fileName' WHERE id = ...
+            }
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -305,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 <?php endif; ?>
                                 
-                                <form method="POST">
+                                <form method="POST" enctype="multipart/form-data">
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Full Name *</label>
