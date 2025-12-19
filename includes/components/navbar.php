@@ -130,20 +130,37 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                             </a></li>
                             
                         <!-- Tailor Menu -->
-                        <?php elseif ($userType == 'tailor'): ?>
-                            <li><h6 class="dropdown-header"><i class="bi bi-scissors me-2"></i>Tailor</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/products.php">
-                                <i class="bi bi-grid me-2"></i> My Products
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/orders.php">
-                                <i class="bi bi-bag-check me-2"></i> Orders
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/profile.php">
-                                <i class="bi bi-person me-2"></i> Profile
-                            </a></li>
+
+
+                        <?php if ($userType == 'tailor'): ?>
+                            <li><h6 class="dropdown-header"><i class="bi bi-scissors me-2"></i>Tailor Panel</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
+                                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/products.php">
+                                    <i class="bi bi-grid me-2"></i> My Products
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/orders.php">
+                                    <i class="bi bi-bag-check me-2"></i> Orders
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/profile.php">
+                                    <i class="bi bi-person me-2"></i> Profile Settings
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                </a>
+                            </li>
+                        <?php endif; ?>
                             
                         <!-- Admin Menu -->
                         <?php elseif ($userType == 'admin'): ?>
