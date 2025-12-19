@@ -155,6 +155,7 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                             </a></li>
                         <?php endif; ?>
                         
+                        
                         <!-- Common Menu Items -->
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/messages.php">
@@ -164,7 +165,11 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                             <i class="bi bi-gear me-2"></i> Settings
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/login.php">
+
+
+                        
+                        <li><a class="dropdown-item text-danger <?php echo (strpos($currentDir, 'auth') !== false || $currentPage == 'login.php') ? 'active' : ''; ?>" 
+                            href="<?php echo SITE_URL; ?>/pages/auth/login.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a></li>
                     </ul>
