@@ -23,6 +23,17 @@ $product = new Product();
 
 $tailorId = $_SESSION['user_id'];
 
+// Get user data
+$userData = $user->getUserById($tailorId);
+if (!$userData) {
+    // Fallback if user not found
+    $userData = [
+        'full_name' => $_SESSION['full_name'] ?? 'Tailor',
+        'profile_pic' => $_SESSION['profile_pic'] ?? 'default.jpg',
+        'email' => $_SESSION['email'] ?? '',
+        'phone' => $_SESSION['phone'] ?? ''
+    ];
+}
 
 // Get statistics using EXISTING methods from your classes
 try {
