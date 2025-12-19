@@ -1,5 +1,384 @@
+php
 <?php
 require_once '../../config.php';
+require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/User.php';
+require_once '../../includes/classes/Order.php';
+require_once '../../includes/classes/Product.php';
+
+session_start();
+// Enhanced security check
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin') {
+    header('Location: ../../pages/auth/login.php');
+    exit();
+}
+
+$db = Database::getInstance();
+$userObj = new User();
+$orderObj = new Order();
+$productObj = new Product();
+
+// 1. Get statistics the system can actually provide
+// Note: The following methods need to be added to your User, Order, and Product classes.
+// I'm using placeholder values to prevent errors. You must implement these methods.
+$stats = [
+    'total_users' => method_exists($userObj, 'getTotalUsersCount') ? $userObj->getTotalUsersCount() : 0,
+    'total_tailors' => method_exists($userObj, 'getTailorsCount') ? $userObj->getTailorsCount() : 0,
+    'total_customers' => method_exists($userObj, 'getCustomersCount') ? $userObj->getCustomersCount() : 0,
+    'total_products' => method_exists($productObj, 'getTotalProductsCount') ? $productObj->getTotalProductsCount() : 0,
+    'total_orders' => method_exists($orderObj, 'getTotalOrdersCount') ? $orderObj->getTotalOrdersCount() : 0,
+    'pending_orders' => 0, // Placeholder - needs a method like getPendingOrdersCount()
+    'total_revenue' => 0,  // Placeholder - needs a method like getTotalRevenue()
+    'new_users_week' => method_exists($userObj, 'getNewUsersThisWeek') ? $userObj->getNewUsersThisWeek() : 0
+];
+
+// 2. Get recent data using methods from the classes you provided
+$recentOrders = $orderObj->getRecentOrders($_SESSION['user_id'], 5); // Uses existing method
+$recentUsers = method_exists($userObj, 'getRecentUsers') ? $userObj->getRecentUsers(5) : [];
+$recentProducts = method_exists($productObj, 'getRecentProducts') ? $productObj->getRecentProducts(5) : [];
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Clothing Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ... (keep your existing CSS styles, they are good) ... */
+        body { background-color: #f8f9fa; }
+        .admin-sidebar { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; min-height: 100vh; padding: 0; }
+        .sidebar-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-nav { padding: 1rem 0; }
+        .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1.5rem; border-left: 4px solid transparent; transition: all 0.3s; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #667eea; }
+        .nav-link i { width: 20px; margin-right: 10px; }
+        .stat-card { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1rem; transition: transform 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .stat-icon.users { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+        .stat-icon.orders { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .stat-icon.products { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .stat-icon.revenue { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .table-card { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        .admin-header { background: white; padding: 1rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar (Unchanged - keep your existing sidebar HTML) -->
+            <div class="col-md-2 col-lg-2 p-0">
+                <div class="admin-sidebar">
+                    <div class="sidebar-header text-center">
+                        <h4 class="fw-bold mb-0">Admin Panel</h4>
+                        <small class="text-muted">Clothing Marketplace</small>
+                    </div>
+                    <div class="sidebar-nav">
+                        <ul class="nav flex-column">
+                            <li class="nav-item"><a class="nav-link active" href="dashboard.php"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="users.php"><i class="bi bi-people"></i> Users</a></li>
+                            <li class="nav-item"><a class="nav-link" href="products.php"><i class="bi bi-box"></i> Products</a></li>
+                            <li class="nav-item"><a class="nav-link" href="orders.php"><i class="bi bi-bag"></i> Orders</a></li>
+                            <li class="nav-item"><a class="nav-link" href="categories.php"><i class="bi bi-grid"></i> Categories</a></li>
+                            <li class="nav-item"><a class="nav-link" href="reviews.php"><i class="bi bi-star"></i> Reviews</a></li>
+                            <li class="nav-item"><a class="nav-link" href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
+                            <li class="nav-item mt-4"><a class="nav-link text-danger" href="../../pages/auth/logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 col-lg-10">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="container-fluid">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="mb-0 fw-bold">Dashboard Overview</h3>
+                                <p class="text-muted mb-0">Welcome back, <?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Administrator'); ?>!</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary btn-sm"><i class="bi bi-download"></i> Export Report</button>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickStatsModal"><i class="bi bi-graph-up"></i> View Analytics</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container-fluid">
+                    <!-- Stats Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon users me-3"><i class="bi bi-people"></i></div>
+                                    <div>
+                                        <h3 class="mb-0"><?php echo $stats['total_users']; ?></h3>
+                                        <small class="text-muted">Total Users</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i>
+                                        <?php echo $stats['new_users_week']; ?> new this week
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon orders me-3"><i class="bi bi-bag-check"></i></div>
+                                    <div>
+                                        <h3 class="mb-0"><?php echo $stats['total_orders']; ?></h3>
+                                        <small class="text-muted">Total Orders</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-warning">
+                                        <i class="bi bi-clock"></i>
+                                        <?php echo $stats['pending_orders']; ?> pending
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon products me-3"><i class="bi bi-box"></i></div>
+                                    <div>
+                                        <h3 class="mb-0"><?php echo $stats['total_products']; ?></h3>
+                                        <small class="text-muted">Total Products</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-info">
+                                        <i class="bi bi-arrow-up-right"></i>
+                                        Active listings
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon revenue me-3"><i class="bi bi-currency-dollar"></i></div>
+                                    <div>
+                                        <h3 class="mb-0">$<?php echo number_format($stats['total_revenue'], 2); ?></h3>
+                                        <small class="text-muted">Total Revenue</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-success">
+                                        <i class="bi bi-graph-up"></i>
+                                        All time revenue
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts & Recent Data -->
+                    <div class="row">
+                        <!-- Recent Orders -->
+                        <div class="col-md-6">
+                            <div class="table-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Recent Orders</h5>
+                                    <a href="orders.php" class="btn btn-sm btn-outline-primary">View All</a>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (!empty($recentOrders)): ?>
+                                                <?php foreach ($recentOrders as $orderItem): ?>
+                                                <tr>
+                                                    <td>#<?php echo $orderItem['order_number'] ?? $orderItem['id']; ?></td>
+                                                    <td>
+                                                        <div><?php echo htmlspecialchars($orderItem['customer_name'] ?? 'N/A'); ?></div>
+                                                        <small class="text-muted"><?php echo date('M d', strtotime($orderItem['created_at'])); ?></small>
+                                                    </td>
+                                                    <td>$<?php echo number_format($orderItem['total_amount'] ?? 0, 2); ?></td>
+                                                    <td>
+                                                        <span class="badge bg-<?php
+                                                            switch($orderItem['status'] ?? 'pending') {
+                                                                case 'pending': echo 'warning'; break;
+                                                                case 'processing': echo 'info'; break;
+                                                                case 'completed': echo 'success'; break;
+                                                                case 'cancelled': echo 'danger'; break;
+                                                                default: echo 'secondary';
+                                                            }
+                                                        ?>">
+                                                            <?php echo ucfirst($orderItem['status'] ?? 'pending'); ?>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <tr><td colspan="4" class="text-center text-muted py-3">No recent orders found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Users -->
+                        <div class="col-md-6">
+                            <div class="table-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Recent Users</h5>
+                                    <a href="users.php" class="btn btn-sm btn-outline-primary">View All</a>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr><th>Name</th><th>Email</th><th>Type</th><th>Joined</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (!empty($recentUsers)): ?>
+                                                <?php foreach ($recentUsers as $userItem): ?>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="../../assets/images/avatars/<?php echo !empty($userItem['profile_pic']) ? htmlspecialchars($userItem['profile_pic']) : 'default.jpg'; ?>"
+                                                                 class="rounded-circle me-2" width="30" height="30" alt="Profile">
+                                                            <?php echo htmlspecialchars($userItem['full_name']); ?>
+                                                        </div>
+                                                    </td>
+                                                    <td><?php echo htmlspecialchars($userItem['email']); ?></td>
+                                                    <td>
+                                                        <span class="badge bg-<?php
+                                                            echo ($userItem['user_type'] == 'tailor') ? 'success' :
+                                                                 (($userItem['user_type'] == 'admin') ? 'danger' : 'primary');
+                                                        ?>">
+                                                            <?php echo ucfirst($userItem['user_type']); ?>
+                                                        </span>
+                                                    </td>
+                                                    <td><?php echo date('M d', strtotime($userItem['created_at'])); ?></td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <tr><td colspan="4" class="text-center text-muted py-3">No recent users found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Products -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="table-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Recent Products</h5>
+                                    <a href="products.php" class="btn btn-sm btn-outline-primary">View All</a>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr><th>Product</th><th>Tailor</th><th>Price</th><th>Category</th><th>Status</th><th>Actions</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (!empty($recentProducts)): ?>
+                                                <?php foreach ($recentProducts as $productItem): ?>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <?php
+                                                            $images = json_decode($productItem['images'] ?? '[]', true);
+                                                            $firstImage = (!empty($images) && is_array($images)) ? $images[0] : 'default.jpg';
+                                                            ?>
+                                                            <img src="../../assets/images/products/<?php echo htmlspecialchars($firstImage); ?>"
+                                                                 class="rounded me-2" width="40" height="40" alt="Product">
+                                                            <div>
+                                                                <div class="fw-bold"><?php echo htmlspecialchars($productItem['title']); ?></div>
+                                                                <small class="text-muted">SKU: <?php echo $productItem['sku'] ?? 'N/A'; ?></small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td><?php echo htmlspecialchars($productItem['tailor_name'] ?? 'N/A'); ?></td>
+                                                    <td>$<?php echo number_format($productItem['price'] ?? 0, 2); ?></td>
+                                                    <td><?php echo ucfirst($productItem['category'] ?? 'Uncategorized'); ?></td>
+                                                    <td>
+                                                        <span class="badge bg-<?php
+                                                            echo ($productItem['status'] == 'active') ? 'success' :
+                                                                 (($productItem['status'] == 'draft') ? 'warning' : 'secondary');
+                                                        ?>">
+                                                            <?php echo ucfirst($productItem['status'] ?? 'unknown'); ?>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="../products/product.php?id=<?php echo $productItem['id']; ?>"
+                                                               class="btn btn-outline-primary" target="_blank"><i class="bi bi-eye"></i></a>
+                                                            <a href="products.php?action=edit&id=<?php echo $productItem['id']; ?>"
+                                                               class="btn btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <tr><td colspan="6" class="text-center text-muted py-3">No recent products found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Modal -->
+    <div class="modal fade" id="quickStatsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Advanced Analytics</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6"><h6>User Distribution</h6><canvas id="userDistributionChart" height="150"></canvas></div>
+                        <div class="col-md-6"><h6>Order Status</h6><canvas id="orderStatusChart" height="150"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Charts use placeholder data. In a real app, fetch this via AJAX from your new methods.
+        // User Distribution Chart
+        const userDistCtx = document.getElementById('userDistributionChart').getContext('2d');
+        new Chart(userDistCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Customers', 'Tailors', 'Admins'],
+                datasets: [{
+                    data: [<?php echo $stats['total_customers']; ?>, <?php echo $stats['total_tailors']; ?>, 1],
+                    backgroundColor: ['#667eea', '#10b981', '#f59e0b']
+                }]
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
 require_once '../../includes/classes/Order.php';
@@ -604,7 +983,7 @@ $recentProducts = $product->getRecentProducts(5);
 
 
 
-<?php
+<?php*/
 /*require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 require_once '../../includes/classes/Order.php';

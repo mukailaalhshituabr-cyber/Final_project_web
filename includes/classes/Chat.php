@@ -1,5 +1,137 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
+class Chat {
+    private $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
+    
+    public function sendMessage($senderId, $receiverId, $message, $orderId = null, $attachment = null) {
+        $this->db->query("INSERT INTO messages (sender_id, receiver_id, order_id, message, attachment, created_at) 
+                         VALUES (:sender_id, :receiver_id, :order_id, :message, :attachment, NOW())");
+        
+        $this->db->bind(':sender_id', $senderId);
+        $this->db->bind(':receiver_id', $receiverId);
+        $this->db->bind(':order_id', $orderId);
+        $this->db->bind(':message', $message);
+        $this->db->bind(':attachment', $attachment);
+        
+        if ($this->db->execute()) {
+            return $this->db->lastInsertId();
+        }
+        return false;
+    }
+    
+    public function getMessages($userId1, $userId2, $limit = 50) {
+        $this->db->query("
+            SELECT m.*, 
+                   s.full_name as sender_name,
+                   s.profile_pic as sender_pic,
+                   r.full_name as receiver_name,
+                   r.profile_pic as receiver_pic
+            FROM messages m
+            LEFT JOIN users s ON m.sender_id = s.id
+            LEFT JOIN users r ON m.receiver_id = r.id
+            WHERE (m.sender_id = :user1 AND m.receiver_id = :user2)
+               OR (m.sender_id = :user2 AND m.receiver_id = :user1)
+            ORDER BY m.created_at ASC
+            LIMIT :limit
+        ");
+        
+        $this->db->bind(':user1', $userId1);
+        $this->db->bind(':user2', $userId2);
+        $this->db->bind(':limit', (int)$limit);
+        
+        return $this->db->resultSet();
+    }
+    
+    public function getConversations($userId) {
+        $this->db->query("
+            SELECT DISTINCT 
+                CASE 
+                    WHEN m.sender_id = :user_id THEN m.receiver_id
+                    ELSE m.sender_id
+                END as other_user_id,
+                u.full_name,
+                u.profile_pic,
+                u.user_type,
+                (SELECT message FROM messages 
+                 WHERE (sender_id = :user_id AND receiver_id = other_user_id)
+                    OR (sender_id = other_user_id AND receiver_id = :user_id)
+                 ORDER BY created_at DESC LIMIT 1) as last_message,
+                (SELECT created_at FROM messages 
+                 WHERE (sender_id = :user_id AND receiver_id = other_user_id)
+                    OR (sender_id = other_user_id AND receiver_id = :user_id)
+                 ORDER BY created_at DESC LIMIT 1) as last_message_time,
+                (SELECT COUNT(*) FROM messages 
+                 WHERE sender_id = other_user_id 
+                 AND receiver_id = :user_id 
+                 AND is_read = 0) as unread_count
+            FROM messages m
+            LEFT JOIN users u ON u.id = CASE 
+                WHEN m.sender_id = :user_id THEN m.receiver_id
+                ELSE m.sender_id
+            END
+            WHERE m.sender_id = :user_id OR m.receiver_id = :user_id
+            GROUP BY other_user_id, u.full_name, u.profile_pic, u.user_type
+            ORDER BY last_message_time DESC
+        ");
+        
+        $this->db->bind(':user_id', $userId);
+        
+        return $this->db->resultSet();
+    }
+    
+    public function markAsRead($senderId, $receiverId) {
+        $this->db->query("UPDATE messages SET is_read = 1 
+                         WHERE sender_id = :sender_id AND receiver_id = :receiver_id AND is_read = 0");
+        
+        $this->db->bind(':sender_id', $senderId);
+        $this->db->bind(':receiver_id', $receiverId);
+        
+        return $this->db->execute();
+    }
+    
+    public function getUnreadCount($userId) {
+        $this->db->query("SELECT COUNT(*) as count FROM messages WHERE receiver_id = :user_id AND is_read = 0");
+        $this->db->bind(':user_id', $userId);
+        $result = $this->db->single();
+        return $result['count'] ?? 0;
+    }
+    
+    public function searchConversations($userId, $searchTerm) {
+        $this->db->query("
+            SELECT DISTINCT 
+                CASE 
+                    WHEN m.sender_id = :user_id THEN m.receiver_id
+                    ELSE m.sender_id
+                END as other_user_id,
+                u.full_name,
+                u.profile_pic,
+                u.user_type,
+                u.email
+            FROM messages m
+            LEFT JOIN users u ON u.id = CASE 
+                WHEN m.sender_id = :user_id THEN m.receiver_id
+                ELSE m.sender_id
+            END
+            WHERE (m.sender_id = :user_id OR m.receiver_id = :user_id)
+            AND (u.full_name LIKE :search OR u.email LIKE :search)
+            GROUP BY other_user_id, u.full_name, u.profile_pic, u.user_type, u.email
+        ");
+        
+        $this->db->bind(':user_id', $userId);
+        $this->db->bind(':search', '%' . $searchTerm . '%');
+        
+        return $this->db->resultSet();
+    }
+}
+?>
+
+
+
+<?php
+/*require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../functions/auth_functions.php';
 
 class Chat {
@@ -197,3 +329,4 @@ class Chat {
     }
 }
 ?>
+*/
