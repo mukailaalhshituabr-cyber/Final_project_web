@@ -2,6 +2,304 @@
 require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    header('Location: ' . SITE_URL . '/pages/' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
+}
+
+$error = '';
+$success = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $remember = isset($_POST['remember']);
+    
+    if (empty($email) || empty($password)) {
+        $error = 'Please fill in all fields';
+    } else {
+        $user = new User();
+        $userData = $user->login($email, $password);
+        
+        if ($userData) {
+            // Set session variables
+            $_SESSION['user_id'] = $userData['id'];
+            $_SESSION['user_type'] = $userData['user_type'];
+            $_SESSION['full_name'] = $userData['full_name'];
+            $_SESSION['email'] = $userData['email'];
+            $_SESSION['username'] = $userData['username'];
+            
+            // Set remember me cookie (30 days)
+            if ($remember) {
+                $token = bin2hex(random_bytes(32));
+                setcookie('remember_token', $token, time() + (30 * 24 * 60 * 60), '/');
+                // Store token in database (you'll need to implement this)
+            }
+            
+            // Redirect based on user type
+            $redirectUrl = SITE_URL . '/pages/' . $userData['user_type'] . '/dashboard.php';
+            header('Location: ' . $redirectUrl);
+            exit();
+        } else {
+            $error = 'Invalid email or password';
+        }
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - <?php echo SITE_NAME; ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .login-left {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .login-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-list li {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-list i {
+            color: #667eea;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .social-login .btn {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .login-left {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="login-card">
+                    <div class="row g-0">
+                        <!-- Left Side - Branding & Features -->
+                        <div class="col-lg-6 d-none d-lg-block">
+                            <div class="login-left">
+                                <div class="login-logo">
+                                    <i class="bi bi-shop me-2"></i><?php echo SITE_NAME; ?>
+                                </div>
+                                <h2 class="fw-bold mb-4">Welcome Back!</h2>
+                                <p class="text-muted mb-4">Sign in to access your account and continue your fashion journey.</p>
+                                
+                                <ul class="feature-list list-unstyled">
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Access your personalized dashboard</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Track your orders and measurements</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Connect with talented tailors</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Get personalized recommendations</span>
+                                    </li>
+                                </ul>
+                                
+                                <div class="mt-5">
+                                    <p class="text-muted mb-2">New to <?php echo SITE_NAME; ?>?</p>
+                                    <a href="register.php" class="btn btn-outline-primary">
+                                        Create an Account <i class="bi bi-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side - Login Form -->
+                        <div class="col-lg-6">
+                            <div class="p-5">
+                                <div class="text-center mb-5">
+                                    <h2 class="fw-bold">Sign In</h2>
+                                    <p class="text-muted">Enter your credentials to continue</p>
+                                </div>
+                                
+                                <?php if ($error): ?>
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <?php echo htmlspecialchars($error); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <?php if ($success): ?>
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <?php echo htmlspecialchars($success); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <form method="POST" action="">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                            <input type="email" class="form-control" name="email" 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
+                                                   placeholder="your@email.com" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                            <input type="password" class="form-control" name="password" 
+                                                   placeholder="Enter your password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="text-end mt-2">
+                                            <a href="forgot-password.php" class="text-decoration-none small">
+                                                Forgot Password?
+                                            </a>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-4 form-check">
+                                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                        <label class="form-check-label" for="remember">Remember me</label>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+                                    </button>
+                                    
+                                    <div class="text-center mb-4">
+                                        <span class="text-muted">Or sign in with</span>
+                                    </div>
+                                    
+                                    <div class="social-login mb-4">
+                                        <button type="button" class="btn btn-outline-primary">
+                                            <i class="bi bi-google me-2"></i> Google
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary">
+                                            <i class="bi bi-facebook me-2"></i> Facebook
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="text-center">
+                                        <p class="text-muted mb-0">Don't have an account? 
+                                            <a href="register.php" class="text-decoration-none fw-bold">Sign Up</a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.querySelector('input[name="password"]');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+        
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const email = this.querySelector('input[name="email"]').value;
+            const password = this.querySelector('input[name="password"]').value;
+            
+            if (!email || !password) {
+                e.preventDefault();
+                alert('Please fill in all fields');
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+<?php
+/*require_once '../../config.php';
+require_once '../../includes/classes/User.php';
+
 // Start session if not started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -131,7 +429,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             overflow-x: hidden;
         }
         
-        /* Animated background particles */
         .particles {
             position: absolute;
             width: 100%;
@@ -145,7 +442,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 50%;
         }
         
-        /* Main container */
         .login-container {
             width: 100%;
             max-width: 1200px;
@@ -153,7 +449,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             z-index: 1;
         }
         
-        /* Login card */
         .login-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -167,7 +462,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             perspective: 1000px;
         }
         
-        /* Left side - Branding */
         .login-brand {
             flex: 1;
             background: var(--primary-gradient);
@@ -260,7 +554,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             flex-shrink: 0;
         }
         
-        /* Right side - Login Form */
         .login-form {
             flex: 1;
             padding: 3rem;
@@ -287,7 +580,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 1.1rem;
         }
         
-        /* Form styling */
         .form-group {
             margin-bottom: 1.5rem;
             position: relative;
@@ -339,7 +631,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #667eea;
         }
         
-        /* Remember me & Forgot password */
         .form-options {
             display: flex;
             justify-content: space-between;
@@ -384,7 +675,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             text-decoration: underline;
         }
         
-        /* Submit button */
         .btn-login {
             background: var(--primary-gradient);
             border: none;
@@ -427,7 +717,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             to { transform: rotate(360deg); }
         }
         
-        /* Social login */
         .social-login {
             margin: 2rem 0;
             position: relative;
@@ -483,7 +772,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 1.2rem;
         }
         
-        /* Register link */
         .register-link {
             text-align: center;
             margin-top: 2rem;
@@ -517,7 +805,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
         }
         
-        /* Messages */
         .message-box {
             border-radius: 12px;
             padding: 1.25rem;
@@ -556,7 +843,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             flex-shrink: 0;
         }
         
-        /* Shake animation for error */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
@@ -567,7 +853,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             animation: shake 0.5s ease-in-out;
         }
         
-        /* Floating animation */
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-20px); }
@@ -577,7 +862,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             animation: float 6s ease-in-out infinite;
         }
         
-        /* Responsive */
         @media (max-width: 992px) {
             .login-card {
                 flex-direction: column;
@@ -627,7 +911,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        /* Mouse parallax effect */
         .login-card {
             transition: transform 0.3s ease;
         }
@@ -993,3 +1276,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </script>
 </body>rotate
 </html>
+*/

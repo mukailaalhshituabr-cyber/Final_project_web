@@ -1,5 +1,714 @@
 <?php
 require_once '../../config.php';
+require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/User.php';
+
+// Start session if not started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check authentication
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
+    header('Location: ../auth/login.php');
+    exit();
+}
+
+$db = Database::getInstance();
+$user = new User();
+$userId = $_SESSION['user_id'];
+
+// Get user data
+$userData = $user->getUserById($userId);
+
+if (!$userData) {
+    session_destroy();
+    header('Location: ../auth/login.php');
+    exit();
+}
+
+// Get statistics from database
+try {
+    // Total orders
+    $db->query("SELECT COUNT(*) as count FROM orders WHERE customer_id = :user_id");
+    $db->bind(':user_id', $userId);
+    $totalOrdersResult = $db->single();
+    $totalOrders = $totalOrdersResult['count'] ?? 0;
+    
+    // Pending orders
+    $db->query("SELECT COUNT(*) as count FROM orders WHERE customer_id = :user_id AND status IN ('pending', 'confirmed', 'processing')");
+    $db->bind(':user_id', $userId);
+    $pendingOrdersResult = $db->single();
+    $pendingOrders = $pendingOrdersResult['count'] ?? 0;
+    
+    // Wishlist count
+    $db->query("SELECT COUNT(*) as count FROM wishlist WHERE user_id = :user_id");
+    $db->bind(':user_id', $userId);
+    $wishlistResult = $db->single();
+    $wishlistCount = $wishlistResult['count'] ?? 0;
+    
+    // Total spent
+    $db->query("SELECT SUM(total_amount) as total FROM orders WHERE customer_id = :user_id AND payment_status = 'paid'");
+    $db->bind(':user_id', $userId);
+    $spentResult = $db->single();
+    $totalSpent = $spentResult['total'] ?? 0;
+    
+    // Recent orders (last 5)
+    $db->query("SELECT o.*, p.title as product_title, p.images 
+                FROM orders o 
+                LEFT JOIN order_items oi ON o.id = oi.order_id 
+                LEFT JOIN products p ON oi.product_id = p.id 
+                WHERE o.customer_id = :user_id 
+                ORDER BY o.created_at DESC 
+                LIMIT 5");
+    $db->bind(':user_id', $userId);
+    $recentOrders = $db->resultSet();
+    
+    // Wishlist items
+    $db->query("SELECT p.*, w.created_at as added_date 
+                FROM wishlist w 
+                JOIN products p ON w.product_id = p.id 
+                WHERE w.user_id = :user_id 
+                AND p.status = 'active' 
+                ORDER BY w.created_at DESC 
+                LIMIT 4");
+    $db->bind(':user_id', $userId);
+    $wishlistItems = $db->resultSet();
+    
+    // Unread messages
+    $db->query("SELECT COUNT(*) as count FROM messages WHERE receiver_id = :user_id AND is_read = 0");
+    $db->bind(':user_id', $userId);
+    $messagesResult = $db->single();
+    $unreadMessages = $messagesResult['count'] ?? 0;
+    
+    // Reviews given
+    $db->query("SELECT COUNT(*) as count FROM reviews WHERE user_id = :user_id");
+    $db->bind(':user_id', $userId);
+    $reviewsResult = $db->single();
+    $reviewsGiven = $reviewsResult['count'] ?? 0;
+    
+} catch (Exception $e) {
+    // If database query fails, use default values
+    $totalOrders = 0;
+    $pendingOrders = 0;
+    $wishlistCount = 0;
+    $totalSpent = 0;
+    $recentOrders = [];
+    $wishlistItems = [];
+    $unreadMessages = 0;
+    $reviewsGiven = 0;
+}
+
+// Format profile picture URL
+$profilePic = !empty($userData['profile_pic']) ? 
+    SITE_URL . '/assets/images/avatars/' . $userData['profile_pic'] : 
+    SITE_URL . '/assets/images/avatars/default.jpg';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard - <?php echo SITE_NAME; ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --light: #f8fafc;
+            --dark: #1e293b;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .dashboard-container {
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 20px 0;
+        }
+        
+        .user-profile {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        
+        .user-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+        
+        .user-role {
+            color: var(--primary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .sidebar-nav .nav-link {
+            color: #64748b;
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-nav .nav-link:hover {
+            background-color: #f1f5f9;
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .sidebar-nav .nav-link.active {
+            background-color: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .sidebar-nav .nav-link i {
+            width: 24px;
+            font-size: 1.1rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+        }
+        
+        .welcome-section {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card.orders { border-left-color: var(--primary); }
+        .stat-card.pending { border-left-color: var(--warning); }
+        .stat-card.wishlist { border-left-color: var(--danger); }
+        .stat-card.spent { border-left-color: var(--success); }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .stat-card.orders .stat-icon { background: rgba(102, 126, 234, 0.1); color: var(--primary); }
+        .stat-card.pending .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .stat-card.wishlist .stat-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .stat-card.spent .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        /* Recent Orders & Wishlist */
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .order-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.3s ease;
+        }
+        
+        .order-item:hover {
+            background-color: #f8fafc;
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .order-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        
+        .order-details {
+            flex: 1;
+        }
+        
+        .order-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .order-meta {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .order-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-processing { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        
+        /* Wishlist Grid */
+        .wishlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .wishlist-item {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .wishlist-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .wishlist-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .wishlist-details {
+            padding: 15px;
+        }
+        
+        .wishlist-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+        
+        .wishlist-price {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            color: #cbd5e1;
+            margin-bottom: 15px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                height: auto;
+                position: static;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .wishlist-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .wishlist-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div class="col-lg-3 col-xl-2">
+                <div class="sidebar">
+                    <!-- User Profile -->
+                    <div class="user-profile">
+                        <img src="<?php echo $profilePic; ?>" 
+                             class="user-avatar" 
+                             alt="<?php echo htmlspecialchars($userData['full_name']); ?>"
+                             onerror="this.src='<?php echo SITE_URL; ?>/assets/images/avatars/default.jpg'">
+                        <h5 class="user-name"><?php echo htmlspecialchars($userData['full_name']); ?></h5>
+                        <div class="user-role">Customer</div>
+                        <a href="profile.php" class="btn btn-sm btn-outline-primary">Edit Profile</a>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <div class="sidebar-nav">
+                        <a href="dashboard.php" class="nav-link active">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="orders.php" class="nav-link">
+                            <i class="bi bi-bag"></i>
+                            <span>My Orders</span>
+                            <?php if ($totalOrders > 0): ?>
+                            <span class="badge bg-primary ms-auto"><?php echo $totalOrders; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="wishlist.php" class="nav-link">
+                            <i class="bi bi-heart"></i>
+                            <span>Wishlist</span>
+                            <?php if ($wishlistCount > 0): ?>
+                            <span class="badge bg-danger ms-auto"><?php echo $wishlistCount; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="messages.php" class="nav-link">
+                            <i class="bi bi-chat-dots"></i>
+                            <span>Messages</span>
+                            <?php if ($unreadMessages > 0): ?>
+                            <span class="badge bg-success ms-auto"><?php echo $unreadMessages; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="address.php" class="nav-link">
+                            <i class="bi bi-geo-alt"></i>
+                            <span>Addresses</span>
+                        </a>
+                        <a href="reviews.php" class="nav-link">
+                            <i class="bi bi-star"></i>
+                            <span>My Reviews</span>
+                            <?php if ($reviewsGiven > 0): ?>
+                            <span class="badge bg-warning ms-auto"><?php echo $reviewsGiven; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="settings.php" class="nav-link">
+                            <i class="bi bi-gear"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="<?php echo SITE_URL; ?>/pages/auth/logout.php" class="nav-link text-danger">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-lg-9 col-xl-10">
+                <div class="main-content">
+                    <!-- Welcome Section -->
+                    <div class="welcome-section">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="welcome-title">Welcome back, <?php echo htmlspecialchars(explode(' ', $userData['full_name'])[0]); ?>! 👋</h1>
+                                <p>Here's what's happening with your account today.</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <a href="<?php echo SITE_URL; ?>/pages/products/" class="btn btn-light btn-lg">
+                                    <i class="bi bi-search me-2"></i> Shop Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="stats-grid">
+                        <div class="stat-card orders">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-value"><?php echo $totalOrders; ?></div>
+                                    <div class="stat-label">Total Orders</div>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="bi bi-bag-check"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card pending">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-value"><?php echo $pendingOrders; ?></div>
+                                    <div class="stat-label">Pending Orders</div>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="bi bi-clock"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card wishlist">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-value"><?php echo $wishlistCount; ?></div>
+                                    <div class="stat-label">Wishlist Items</div>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="bi bi-heart"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card spent">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-value">$<?php echo number_format($totalSpent, 2); ?></div>
+                                    <div class="stat-label">Total Spent</div>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="bi bi-currency-dollar"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Orders -->
+                    <div class="section-card">
+                        <div class="section-title">
+                            <span>Recent Orders</span>
+                            <a href="orders.php" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        
+                        <?php if (!empty($recentOrders)): ?>
+                            <?php foreach ($recentOrders as $order): 
+                                // Get first product image
+                                $images = json_decode($order['images'] ?? '[]', true);
+                                $productImage = !empty($images) ? $images[0] : SITE_URL . '/assets/images/products/default.jpg';
+                                $productImage = strpos($productImage, 'http') === 0 ? $productImage : SITE_URL . '/assets/images/products/' . $productImage;
+                            ?>
+                            <div class="order-item">
+                                <img src="<?php echo htmlspecialchars($productImage); ?>" 
+                                     class="order-image" 
+                                     alt="<?php echo htmlspecialchars($order['product_title'] ?? 'Product'); ?>"
+                                     onerror="this.src='<?php echo SITE_URL; ?>/assets/images/products/default.jpg'">
+                                <div class="order-details">
+                                    <div class="order-title">
+                                        <?php echo htmlspecialchars($order['product_title'] ?? 'Order #' . $order['order_number']); ?>
+                                    </div>
+                                    <div class="order-meta">
+                                        Order #<?php echo htmlspecialchars($order['order_number']); ?> • 
+                                        $<?php echo number_format($order['total_amount'] ?? 0, 2); ?> • 
+                                        <?php echo date('M d, Y', strtotime($order['created_at'] ?? '')); ?>
+                                    </div>
+                                    <span class="order-status status-<?php echo str_replace(' ', '-', strtolower($order['status'] ?? 'pending')); ?>">
+                                        <?php echo ucfirst($order['status'] ?? 'Pending'); ?>
+                                    </span>
+                                </div>
+                                <a href="orders.php?action=view&id=<?php echo $order['id']; ?>" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <i class="bi bi-bag"></i>
+                                </div>
+                                <h5>No orders yet</h5>
+                                <p>Start shopping to see your orders here</p>
+                                <a href="<?php echo SITE_URL; ?>/pages/products/" class="btn btn-primary">
+                                    <i class="bi bi-cart me-2"></i> Start Shopping
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Wishlist -->
+                    <div class="section-card">
+                        <div class="section-title">
+                            <span>Wishlist Items</span>
+                            <a href="wishlist.php" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        
+                        <?php if (!empty($wishlistItems)): ?>
+                            <div class="wishlist-grid">
+                                <?php foreach ($wishlistItems as $item): 
+                                    // Get first product image
+                                    $images = json_decode($item['images'] ?? '[]', true);
+                                    $productImage = !empty($images) ? $images[0] : SITE_URL . '/assets/images/products/default.jpg';
+                                    $productImage = strpos($productImage, 'http') === 0 ? $productImage : SITE_URL . '/assets/images/products/' . $productImage;
+                                ?>
+                                <div class="wishlist-item">
+                                    <img src="<?php echo htmlspecialchars($productImage); ?>" 
+                                         class="wishlist-image" 
+                                         alt="<?php echo htmlspecialchars($item['title']); ?>"
+                                         onerror="this.src='<?php echo SITE_URL; ?>/assets/images/products/default.jpg'">
+                                    <div class="wishlist-details">
+                                        <div class="wishlist-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                        <div class="wishlist-price">$<?php echo number_format($item['price'] ?? 0, 2); ?></div>
+                                        <div class="mt-3">
+                                            <a href="<?php echo SITE_URL; ?>/pages/products/view.php?id=<?php echo $item['id']; ?>" 
+                                               class="btn btn-sm btn-primary w-100">
+                                                <i class="bi bi-cart-plus me-1"></i> Add to Cart
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <i class="bi bi-heart"></i>
+                                </div>
+                                <h5>Your wishlist is empty</h5>
+                                <p>Save items you love for later</p>
+                                <a href="<?php echo SITE_URL; ?>/pages/products/" class="btn btn-primary">
+                                    <i class="bi bi-search me-2"></i> Browse Products
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simple animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add fade-in animation to cards
+            const cards = document.querySelectorAll('.stat-card, .order-item, .wishlist-item');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.5s ease';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Update last active time
+            function updateLastActive() {
+                // This would send an AJAX request in a real application
+                console.log('Updating last active time...');
+            }
+            
+            // Update every 5 minutes
+            setInterval(updateLastActive, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 require_once '../../includes/classes/Order.php';
 require_once '../../includes/classes/Product.php';
@@ -373,3 +1082,4 @@ $wishlistItems = $product->getWishlistItems($_SESSION['user_id']);
     <script src="<?php echo SITE_URL; ?>/assets/js/dashboard.js"></script>
 </body>
 </html>
+*/

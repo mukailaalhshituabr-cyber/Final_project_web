@@ -1,5 +1,446 @@
+2. pages/auth/register.php:
+php
 <?php
 require_once '../../config.php';
+require_once '../../includes/classes/User.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    header('Location: ' . SITE_URL . '/pages/' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
+}
+
+$error = '';
+$success = '';
+$userType = $_GET['type'] ?? 'customer'; // Default to customer
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Collect and sanitize form data
+    $data = [
+        'username' => trim($_POST['username'] ?? ''),
+        'email' => trim($_POST['email'] ?? ''),
+        'password' => $_POST['password'] ?? '',
+        'confirm_password' => $_POST['confirm_password'] ?? '',
+        'full_name' => trim($_POST['full_name'] ?? ''),
+        'user_type' => $_POST['user_type'] ?? 'customer',
+        'phone' => trim($_POST['phone'] ?? ''),
+        'address' => trim($_POST['address'] ?? ''),
+        'bio' => trim($_POST['bio'] ?? '')
+    ];
+    
+    // Validate required fields
+    if (empty($data['username']) || empty($data['email']) || empty($data['password']) || 
+        empty($data['confirm_password']) || empty($data['full_name'])) {
+        $error = 'Please fill in all required fields';
+    } elseif ($data['password'] !== $data['confirm_password']) {
+        $error = 'Passwords do not match';
+    } elseif (strlen($data['password']) < 6) {
+        $error = 'Password must be at least 6 characters';
+    } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $error = 'Invalid email address';
+    } else {
+        $user = new User();
+        $result = $user->register($data);
+        
+        if (is_numeric($result)) {
+            // Registration successful - automatically log in
+            $userData = $user->getUserById($result);
+            
+            // Set session variables
+            $_SESSION['user_id'] = $userData['id'];
+            $_SESSION['user_type'] = $userData['user_type'];
+            $_SESSION['full_name'] = $userData['full_name'];
+            $_SESSION['email'] = $userData['email'];
+            $_SESSION['username'] = $userData['username'];
+            
+            // Redirect based on user type
+            $redirectUrl = SITE_URL . '/pages/' . $userData['user_type'] . '/dashboard.php';
+            header('Location: ' . $redirectUrl);
+            exit();
+        } else {
+            $error = $result; // Error message from User class
+        }
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - <?php echo SITE_NAME; ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .register-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .register-left {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .register-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-list li {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-list i {
+            color: #667eea;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .user-type-card {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .user-type-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+        
+        .user-type-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .user-type-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .password-strength {
+            height: 5px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background: #dc3545;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .register-left {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="register-card">
+                    <div class="row g-0">
+                        <!-- Left Side - Branding & Features -->
+                        <div class="col-lg-6 d-none d-lg-block">
+                            <div class="register-left">
+                                <div class="register-logo">
+                                    <i class="bi bi-shop me-2"></i><?php echo SITE_NAME; ?>
+                                </div>
+                                <h2 class="fw-bold mb-4">Join Our Community</h2>
+                                <p class="text-muted mb-4">Create an account to start your fashion journey with custom-made clothing.</p>
+                                
+                                <ul class="feature-list list-unstyled">
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Browse unique designs from global tailors</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Get personalized outfit recommendations</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Track orders and measurements</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Secure payment and worldwide shipping</span>
+                                    </li>
+                                    <?php if ($userType == 'tailor'): ?>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Showcase your designs to global customers</span>
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Manage orders and earnings</span>
+                                    </li>
+                                    <?php endif; ?>
+                                </ul>
+                                
+                                <div class="mt-5">
+                                    <p class="text-muted mb-2">Already have an account?</p>
+                                    <a href="login.php" class="btn btn-outline-primary">
+                                        Sign In <i class="bi bi-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side - Registration Form -->
+                        <div class="col-lg-6">
+                            <div class="p-5">
+                                <div class="text-center mb-5">
+                                    <h2 class="fw-bold">Create Account</h2>
+                                    <p class="text-muted">Join our fashion community today</p>
+                                </div>
+                                
+                                <?php if ($error): ?>
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <?php echo htmlspecialchars($error); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <form method="POST" action="">
+                                    <!-- User Type Selection -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold mb-3">I want to join as:</label>
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <div class="user-type-card <?php echo $userType == 'customer' ? 'selected' : ''; ?>" 
+                                                     onclick="selectUserType('customer')">
+                                                    <i class="bi bi-person"></i>
+                                                    <h6 class="fw-bold mb-2">Customer</h6>
+                                                    <p class="small text-muted mb-0">Buy custom clothing</p>
+                                                    <input type="radio" name="user_type" value="customer" 
+                                                           <?php echo $userType == 'customer' ? 'checked' : ''; ?> hidden>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="user-type-card <?php echo $userType == 'tailor' ? 'selected' : ''; ?>" 
+                                                     onclick="selectUserType('tailor')">
+                                                    <i class="bi bi-scissors"></i>
+                                                    <h6 class="fw-bold mb-2">Tailor</h6>
+                                                    <p class="small text-muted mb-0">Sell your designs</p>
+                                                    <input type="radio" name="user_type" value="tailor" 
+                                                           <?php echo $userType == 'tailor' ? 'checked' : ''; ?> hidden>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Personal Information -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Full Name *</label>
+                                            <input type="text" class="form-control" name="full_name" 
+                                                   value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>" 
+                                                   placeholder="John Doe" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Username *</label>
+                                            <input type="text" class="form-control" name="username" 
+                                                   value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" 
+                                                   placeholder="johndoe" required>
+                                            <div class="form-text">This will be your public username</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Contact Information -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Email Address *</label>
+                                            <input type="email" class="form-control" name="email" 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
+                                                   placeholder="your@email.com" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Phone Number</label>
+                                            <input type="tel" class="form-control" name="phone" 
+                                                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>" 
+                                                   placeholder="+234 801 234 5678">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Password -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Password *</label>
+                                            <input type="password" class="form-control" name="password" 
+                                                   id="password" placeholder="At least 6 characters" required>
+                                            <div class="password-strength">
+                                                <div class="password-strength-bar" id="passwordStrength"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Confirm Password *</label>
+                                            <input type="password" class="form-control" name="confirm_password" 
+                                                   placeholder="Confirm your password" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Additional Information -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Address</label>
+                                        <textarea class="form-control" name="address" rows="2" 
+                                                  placeholder="Your address (optional)"><?php echo htmlspecialchars($_POST['address'] ?? ''); ?></textarea>
+                                    </div>
+                                    
+                                    <?php if ($userType == 'tailor'): ?>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Bio / Introduction</label>
+                                        <textarea class="form-control" name="bio" rows="3" 
+                                                  placeholder="Tell us about your tailoring experience and specialties..."><?php echo htmlspecialchars($_POST['bio'] ?? ''); ?></textarea>
+                                        <div class="form-text">This will be displayed on your tailor profile</div>
+                                    </div>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Terms and Conditions -->
+                                    <div class="mb-4 form-check">
+                                        <input type="checkbox" class="form-check-input" id="terms" required>
+                                        <label class="form-check-label" for="terms">
+                                            I agree to the <a href="<?php echo SITE_URL; ?>/pages/help/terms.php" class="text-decoration-none">Terms of Service</a> 
+                                            and <a href="<?php echo SITE_URL; ?>/pages/help/privacy.php" class="text-decoration-none">Privacy Policy</a>
+                                        </label>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
+                                        <i class="bi bi-person-plus me-2"></i> Create Account
+                                    </button>
+                                    
+                                    <div class="text-center">
+                                        <p class="text-muted mb-0">Already have an account? 
+                                            <a href="login.php" class="text-decoration-none fw-bold">Sign In</a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // User type selection
+        function selectUserType(type) {
+            document.querySelectorAll('.user-type-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            document.querySelector(`.user-type-card[onclick="selectUserType('${type}')"]`).classList.add('selected');
+            document.querySelector(`input[name="user_type"][value="${type}"]`).checked = true;
+        }
+        
+        // Password strength indicator
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const strengthBar = document.getElementById('passwordStrength');
+            let strength = 0;
+            
+            if (password.length >= 6) strength += 25;
+            if (/[A-Z]/.test(password)) strength += 25;
+            if (/[0-9]/.test(password)) strength += 25;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+            
+            strengthBar.style.width = strength + '%';
+            
+            // Change color based on strength
+            if (strength < 50) {
+                strengthBar.style.backgroundColor = '#dc3545';
+            } else if (strength < 75) {
+                strengthBar.style.backgroundColor = '#ffc107';
+            } else {
+                strengthBar.style.backgroundColor = '#28a745';
+            }
+        });
+        
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.querySelector('input[name="confirm_password"]').value;
+            const terms = document.getElementById('terms').checked;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match');
+                return false;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters');
+                return false;
+            }
+            
+            if (!terms) {
+                e.preventDefault();
+                alert('You must agree to the terms and conditions');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 // Start session if not started
@@ -138,7 +579,6 @@ if (empty($_SESSION['csrf_token'])) {
             overflow-x: hidden;
         }
         
-        /* Animated background particles */
         .particles {
             position: absolute;
             width: 100%;
@@ -152,7 +592,6 @@ if (empty($_SESSION['csrf_token'])) {
             border-radius: 50%;
         }
         
-        /* Main container */
         .login-container {
             width: 100%;
             max-width: 1200px;
@@ -160,7 +599,6 @@ if (empty($_SESSION['csrf_token'])) {
             z-index: 1;
         }
         
-        /* Login card */
         .login-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -169,12 +607,11 @@ if (empty($_SESSION['csrf_token'])) {
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
             display: flex;
-            min-height: 750px; /* Increased height for register form */
+            min-height: 750px; 
             transform-style: preserve-3d;
             perspective: 1000px;
         }
         
-        /* Left side - Branding */
         .login-brand {
             flex: 1;
             background: var(--primary-gradient);
@@ -267,7 +704,6 @@ if (empty($_SESSION['csrf_token'])) {
             flex-shrink: 0;
         }
         
-        /* Right side - Register Form */
         .login-form {
             flex: 1;
             padding: 3rem;
@@ -294,7 +730,6 @@ if (empty($_SESSION['csrf_token'])) {
             font-size: 1.1rem;
         }
         
-        /* Form styling */
         .form-group {
             margin-bottom: 1.5rem;
             position: relative;
@@ -328,7 +763,6 @@ if (empty($_SESSION['csrf_token'])) {
             position: relative;
         }
         
-        /* New style for input group icon */
         .input-group-text {
             background: none;
             border: none;
@@ -360,7 +794,6 @@ if (empty($_SESSION['csrf_token'])) {
             color: #667eea;
         }
         
-        /* Remember me & Forgot password (Adapt to Register's terms) */
         .form-options {
             display: flex;
             justify-content: space-between;
@@ -370,7 +803,7 @@ if (empty($_SESSION['csrf_token'])) {
         
         .form-check {
             display: flex;
-            align-items: flex-start; /* Aligned for multi-line text */
+            align-items: flex-start; 
             gap: 0.5rem;
             margin-top: 10px;
         }
@@ -408,7 +841,6 @@ if (empty($_SESSION['csrf_token'])) {
             text-decoration: underline;
         }
         
-        /* Submit button (Using .btn-success gradient) */
         .btn-register-custom {
             background: var(--success-gradient);
             border: none;
@@ -430,7 +862,7 @@ if (empty($_SESSION['csrf_token'])) {
         .btn-register-custom:hover {
             transform: translateY(-3px);
             box-shadow: 0 15px 30px rgba(67, 233, 123, 0.3);
-            color: white; /* Important for anchor tag */
+            color: white; 
         }
         
         .btn-register-custom:active {
@@ -456,7 +888,6 @@ if (empty($_SESSION['csrf_token'])) {
             to { transform: rotate(360deg); }
         }
         
-        /* Login link */
         .login-link {
             text-align: center;
             margin-top: 2rem;
@@ -490,7 +921,6 @@ if (empty($_SESSION['csrf_token'])) {
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
         }
         
-        /* Messages */
         .message-box {
             border-radius: 12px;
             padding: 1.25rem;
@@ -529,7 +959,6 @@ if (empty($_SESSION['csrf_token'])) {
             flex-shrink: 0;
         }
         
-        /* Shake animation for error */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
@@ -540,7 +969,6 @@ if (empty($_SESSION['csrf_token'])) {
             animation: shake 0.5s ease-in-out;
         }
 
-        /* Responsive */
         @media (max-width: 992px) {
             .login-card {
                 flex-direction: column;
@@ -579,7 +1007,6 @@ if (empty($_SESSION['csrf_token'])) {
                 font-size: 1.8rem;
             }
             
-            /* Social login buttons not used in register, but kept for consistency */
             .social-buttons {
                 grid-template-columns: 1fr;
             }
@@ -591,7 +1018,6 @@ if (empty($_SESSION['csrf_token'])) {
             }
         }
         
-        /* Mouse parallax effect */
         .login-card {
             transition: transform 0.3s ease;
         }
@@ -916,3 +1342,5 @@ if (empty($_SESSION['csrf_token'])) {
 </script>const
 </body>
 </html>
+
+*/
