@@ -286,9 +286,22 @@ class ProductFunctions {
                 
                 // Move uploaded file
                 if (move_uploaded_file($files['images']['tmp_name'][$i], $targetPath)) {
+                    $targetDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/products/';
+                    if (!is_dir($targetDir)) {
+                        mkdir($targetDir, 0777, true); // PHP creates and owns the folder
+                    }
                     // Resize image for optimization
                     $this->resizeProductImage($targetPath);
                     $uploadedFilenames[] = $filename;
+                }
+
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
+                    // Success logic
+                } else {
+                    // Check if the directory is actually writable
+                    if (!is_writable(dirname($targetPath))) {
+                        error_log("Directory not writable: " . dirname($targetPath));
+                    }
                 }
             }
         }
