@@ -232,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+                                        <a href="pages/tailor/dashboard.php"><i class="bi bi-box-arrow-in-right me-2"></i> Sign In</a>
                                     </button>
                                     
                                     <div class="text-center mb-4">
