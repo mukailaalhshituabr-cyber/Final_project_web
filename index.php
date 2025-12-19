@@ -42,6 +42,7 @@ if ($currentCategory) {
         }
         
         body {
+            margin: 10px;
             font-family: 'Poppins', sans-serif;
         }
         
