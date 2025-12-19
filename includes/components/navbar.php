@@ -1,200 +1,15 @@
 <?php
-// Check if user is logged in
-$isLoggedIn = isset($_SESSION['user_id']);
-$userType = $_SESSION['user_type'] ?? '';
-$userName = $_SESSION['full_name'] ?? '';
-?>
+// Start session if not already started
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <!-- Logo -->
-        <a class="navbar-brand fw-bold fs-3 text-primary" href="<?php echo SITE_URL; ?>">
-            <i class="bi bi-shop me-2"></i><?php echo SITE_NAME; ?>
-        </a>
-        
-        <!-- Mobile Toggle -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!-- Navigation Links -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <a class="nav-link active" href="<?php echo SITE_URL; ?>">
-                        <i class="bi bi-house me-1"></i> Home
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/products/">
-                        <i class="bi bi-bag me-1"></i> Shop
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/tailor/browse.php">
-                        <i class="bi bi-person-badge me-1"></i> Find Tailors
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/how-it-works.php">
-                        <i class="bi bi-question-circle me-1"></i> How It Works
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/contact.php">
-                        <i class="bi bi-envelope me-1"></i> Contact
-                    </a>
-                </li>
-            </ul>
-            
-            <!-- Right Side -->
-            <div class="d-flex align-items-center">
-                <!-- Search -->
-                <div class="input-group me-3" style="max-width: 300px;">
-                    <input type="text" class="form-control" placeholder="Search products...">
-                    <button class="btn btn-outline-primary" type="button">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </div>
-                
-                <!-- Cart -->
-                <a href="<?php echo SITE_URL; ?>/pages/cart.php" class="btn btn-outline-primary me-3 position-relative">
-                    <i class="bi bi-cart"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        0
-                    </span>
-                </a>
-                
-                <!-- User Menu -->
-                <?php if ($isLoggedIn): ?>
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle me-2"></i>
-                        <?php echo htmlspecialchars($userName); ?>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <?php if ($userType == 'customer'): ?>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/profile.php">
-                                <i class="bi bi-person me-2"></i> My Profile
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/orders.php">
-                                <i class="bi bi-bag me-2"></i> My Orders
-                            </a></li>
-                        <?php elseif ($userType == 'tailor'): ?>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
-                                <i class="bi bi-speedometer2 me-2"></i> Tailor Dashboard
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/portfolio.php">
-                                <i class="bi bi-images me-2"></i> My Portfolio
-                            </a></li>
-                        <?php endif; ?>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/login.php">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a></li>
-                    </ul>
-                </div>
-                <?php else: ?>
-                <div class="d-flex gap-2">
-                    <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">
-                        <i class="bi bi-box-arrow-in-right me-2"></i> Login
-                    </a>
-                    <a href="<?php echo SITE_URL; ?>/pages/auth/register.php" class="btn btn-primary">
-                        <i class="bi bi-person-plus me-2"></i> Register
-                    </a>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</nav>
-
-<style>
-.navbar {
-    padding: 0.75rem 0;
-    transition: all 0.3s ease;
-}
-
-.navbar-brand {
-    font-size: 1.75rem;
-    font-weight: 700;
-}
-
-.nav-link {
-    font-weight: 500;
-    padding: 0.5rem 1rem !important;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.nav-link:hover, .nav-link.active {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea !important;
-}
-
-.dropdown-menu {
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    border-radius: 10px;
-    padding: 0.5rem 0;
-}
-
-.dropdown-item {
-    padding: 0.75rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.dropdown-item:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
-}
-
-.input-group {
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.input-group input {
-    border-right: none;
-}
-
-.input-group .btn {
-    border-left: none;
-}
-
-@media (max-width: 992px) {
-    .navbar-nav {
-        padding: 1rem 0;
-        text-align: center;
-    }
-    
-    .d-flex {
-        justify-content: center;
-        margin-top: 1rem;
-    }
-    
-    .input-group {
-        margin: 1rem auto;
-    }
-}
-</style>
-
-
-
-<?php
-/*// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Define SITE_URL if not defined
+// FIX: Define a stable SITE_URL that doesn't change based on the current folder
 if (!defined('SITE_URL')) {
-    define('SITE_URL', 'http://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['PHP_SELF'])));
-    // Clean up the URL
-    $SITE_URL = rtrim(SITE_URL, '/');
+    // This creates: http://169.239.251.102:341/~mukaila.shittu/Final_project_web
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    define('SITE_URL', $protocol . '://' . $_SERVER['HTTP_HOST'] . '/~mukaila.shittu/Final_project_web');
 }
 
 // Check if user is logged in
@@ -229,33 +44,38 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
         <!-- Navigation Links -->
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mx-auto">
+
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($currentPage == 'index.php' || $currentPage == '') ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>">
+                    href="<?php echo SITE_URL; ?>/index.php">
                         <i class="bi bi-house me-1"></i> Home
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link <?php echo (strpos($currentDir, 'products') !== false || $currentPage == 'products.php') ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/pages/products/index.php">
+                    <a class="nav-link <?php echo (strpos($currentDir, 'products') !== false) ? 'active' : ''; ?>" 
+                    href="<?php echo SITE_URL; ?>/pages/products/index.php">
                         <i class="bi bi-bag me-1"></i> Shop
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($currentPage == 'dashboard.php' || strpos($currentDir, 'tailor') !== false) ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
+                    <a class="nav-link <?php echo (strpos($currentDir, 'tailor') !== false && $currentPage != 'dashboard.php') ? 'active' : ''; ?>" 
+                    href="<?php echo SITE_URL; ?>/pages/tailors/index.php">
                         <i class="bi bi-person-badge me-1"></i> Find Tailors
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($currentPage == 'products.php') ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/products/producs.php">
+                    <a class="nav-link <?php echo ($currentPage == 'how-it-works.php') ? 'active' : ''; ?>" 
+                    href="<?php echo SITE_URL; ?>/pages/how-it-works.php">
                         <i class="bi bi-question-circle me-1"></i> How It Works
                     </a>
                 </li>
+
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($currentPage == 'contact.php') ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/pages/contact.php">
+                    href="<?php echo SITE_URL; ?>/pages/contact.php">
                         <i class="bi bi-envelope me-1"></i> Contact
                     </a>
                 </li>
@@ -489,6 +309,7 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
         justify-content: center;
     }
 
+    /* Mobile Responsive */
     @media (max-width: 992px) {
         .navbar-nav {
             padding: 1rem 0;
@@ -551,6 +372,7 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
         }
     }
 
+    /* Animation for cart badge */
     @keyframes bounce {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.2); }
@@ -566,14 +388,6 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
 document.addEventListener('DOMContentLoaded', function() {
     // Highlight active link
     const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.nav-link');
-    
-    navLinks.forEach(link => {
-        const href = link.getAttribute('href');
-        if (currentPath.includes(href) && href !== '/') {
-            link.classList.add('active');
-        }
-    });
     
     // Toggle search on mobile
     const searchForm = document.querySelector('form');
@@ -615,13 +429,196 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+<?php
+/*// Check if user is logged in
+$isLoggedIn = isset($_SESSION['user_id']);
+$userType = $_SESSION['user_type'] ?? '';
+$userName = $_SESSION['full_name'] ?? '';
+?>
 
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <!-- Logo -->
+        <a class="navbar-brand fw-bold fs-3 text-primary" href="<?php echo SITE_URL; ?>">
+            <i class="bi bi-shop me-2"></i><?php echo SITE_NAME; ?>
+        </a>
+        
+        <!-- Mobile Toggle -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Navigation Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="<?php echo SITE_URL; ?>">
+                        <i class="bi bi-house me-1"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/products/">
+                        <i class="bi bi-bag me-1"></i> Shop
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/tailor/browse.php">
+                        <i class="bi bi-person-badge me-1"></i> Find Tailors
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/how-it-works.php">
+                        <i class="bi bi-question-circle me-1"></i> How It Works
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo SITE_URL; ?>/pages/contact.php">
+                        <i class="bi bi-envelope me-1"></i> Contact
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Right Side -->
+            <div class="d-flex align-items-center">
+                <!-- Search -->
+                <div class="input-group me-3" style="max-width: 300px;">
+                    <input type="text" class="form-control" placeholder="Search products...">
+                    <button class="btn btn-outline-primary" type="button">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                
+                <!-- Cart -->
+                <a href="<?php echo SITE_URL; ?>/pages/cart.php" class="btn btn-outline-primary me-3 position-relative">
+                    <i class="bi bi-cart"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        0
+                    </span>
+                </a>
+                
+                <!-- User Menu -->
+                <?php if ($isLoggedIn): ?>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <?php echo htmlspecialchars($userName); ?>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <?php if ($userType == 'customer'): ?>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/profile.php">
+                                <i class="bi bi-person me-2"></i> My Profile
+                            </a></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/orders.php">
+                                <i class="bi bi-bag me-2"></i> My Orders
+                            </a></li>
+                        <?php elseif ($userType == 'tailor'): ?>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
+                                <i class="bi bi-speedometer2 me-2"></i> Tailor Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/portfolio.php">
+                                <i class="bi bi-images me-2"></i> My Portfolio
+                            </a></li>
+                        <?php endif; ?>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/login.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a></li>
+                    </ul>
+                </div>
+                <?php else: ?>
+                <div class="d-flex gap-2">
+                    <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Login
+                    </a>
+                    <a href="<?php echo SITE_URL; ?>/pages/auth/register.php" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-2"></i> Register
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<style>
+.navbar {
+    padding: 0.75rem 0;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.nav-link {
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea !important;
+}
+
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+.input-group {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.input-group input {
+    border-right: none;
+}
+
+.input-group .btn {
+    border-left: none;
+}
+
+@media (max-width: 992px) {
+    .navbar-nav {
+        padding: 1rem 0;
+        text-align: center;
+    }
+    
+    .d-flex {
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    .input-group {
+        margin: 1rem auto;
+    }
+}
+</style>
+*/
 
 
 
 
 //1111111111111111111111111111111111111111111111
-/// Start session if not already started
+/*// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
