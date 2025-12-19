@@ -56,14 +56,14 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($currentPage == 'browse.php' || strpos($currentDir, 'tailor') !== false) ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/pages/tailor/browse.php">
+                    <a class="nav-link <?php echo ($currentPage == 'dashboard.php' || strpos($currentDir, 'tailor') !== false) ? 'active' : ''; ?>" 
+                       href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
                         <i class="bi bi-person-badge me-1"></i> Find Tailors
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($currentPage == 'how-it-works.php') ? 'active' : ''; ?>" 
-                       href="<?php echo SITE_URL; ?>/pages/how-it-works.php">
+                    <a class="nav-link <?php echo ($currentPage == 'products.php') ? 'active' : ''; ?>" 
+                       href="<?php echo SITE_URL; ?>/products/producs.php">
                         <i class="bi bi-question-circle me-1"></i> How It Works
                     </a>
                 </li>
@@ -109,7 +109,8 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                         <!-- Customer Menu -->
                         <?php if ($userType == 'customer'): ?>
                             <li><h6 class="dropdown-header"><i class="bi bi-person me-2"></i>Customer</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php">
+                            <li><a class="dropdown-item <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>" 
+                                href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php">
                                 <i class="bi bi-speedometer2 me-2"></i> Dashboard
                             </a></li>
                             <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/profile.php">
