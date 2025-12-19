@@ -165,7 +165,7 @@ if ($isLoggedIn) {
 }
 
 .navbar-brand {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #667eea !important;
 }
@@ -311,7 +311,7 @@ if ($isLoggedIn) {
     }
 }
 
-@media (max-width: 276px) {
+@media (max-width: 576px) {
     .navbar-brand {
         font-size: 1.5rem;
     }
