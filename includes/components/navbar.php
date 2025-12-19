@@ -123,7 +123,7 @@ dropdown
 
                         <?php elseif ($userType == 'tailor'): ?>
                             <li><h6 class="dropdown-header"><i class="bi bi-scissors me-2"></i>Tailor Panel</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/index.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
                             <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/products.php"><i class="bi bi-grid me-2"></i> My Products</a></li>
                             <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/orders.php"><i class="bi bi-bag-check me-2"></i> Orders</a></li>
 
