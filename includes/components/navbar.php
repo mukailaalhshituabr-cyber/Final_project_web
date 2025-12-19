@@ -173,9 +173,9 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
                         
-                        <li><a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/login.php">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a></li>
+                        <a class="nav-link text-danger" href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
                     </ul>
                 </div>
                 <?php else: ?>
