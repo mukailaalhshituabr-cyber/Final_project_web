@@ -311,7 +311,7 @@ if ($isLoggedIn) {
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 276px) {
     .navbar-brand {
         font-size: 1.5rem;
     }
