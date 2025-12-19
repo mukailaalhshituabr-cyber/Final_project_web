@@ -1,7 +1,10 @@
 <?php
-// Start session at the VERY BEGINNING
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+
+// pages/tailor/products.php (basic)
+session_start();
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
+    header('Location: ../../pages/auth/login.php');
+    exit();
 }
 
 require_once '../../config.php';
@@ -146,6 +149,8 @@ try {
     <title>Tailor Dashboard - <?php echo SITE_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <style>
         body {
             background-color: #f8f9fa;
