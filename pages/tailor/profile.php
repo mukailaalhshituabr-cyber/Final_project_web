@@ -185,6 +185,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $error = "Error: updateTailorProfile method is missing in User.php class.";
     }*/
+        // Add this to your POST handling:
+    if (!empty($_POST['profile_base64'])) {
+        $base64Image = $_POST['profile_base64'];
+        $base64Image = str_replace('data:image/jpeg;base64,', '', $base64Image);
+        $imageData = base64_decode($base64Image);
+        
+        $avatarDir = '../../assets/images/avatars/';
+        $newFileName = "user_" . $userId . "_" . time() . ".jpg";
+        $dest_path = $avatarDir . $newFileName;
+        
+        if (file_put_contents($dest_path, $imageData)) {
+            $profile_pic = $newFileName;
+        }
+    }
+        
 }
 ?>
 <!DOCTYPE html>
@@ -503,6 +518,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
         </div>
+
+        
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -527,6 +544,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 tab.show();
             }
         });
+
+        
+    </script>
+
+    // Add this ALTERNATIVE upload method to your profile.php form:
+
+    <!-- Add this as an alternative upload method in your form -->
+    <div class="mb-4">
+        <label class="form-label fw-bold">Or take a photo with your camera:</label>
+        <div id="camera-container" class="d-none">
+            <video id="camera-preview" width="320" height="240" autoplay></video>
+            <button type="button" id="capture-btn" class="btn btn-success mt-2">
+                <i class="bi bi-camera"></i> Capture Photo
+            </button>
+        </div>
+        <button type="button" id="start-camera-btn" class="btn btn-outline-secondary">
+            <i class="bi bi-camera-video"></i> Use Camera
+        </button>
+        <canvas id="photo-canvas" class="d-none"></canvas>
+        <input type="hidden" id="profile_base64" name="profile_base64">
+    </div>
+
+    <script>
+    // Camera functionality as backup
+    document.getElementById('start-camera-btn').addEventListener('click', function() {
+        const constraints = { video: true };
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(function(stream) {
+                const video = document.getElementById('camera-preview');
+                video.srcObject = stream;
+                document.getElementById('camera-container').classList.remove('d-none');
+                this.style.display = 'none';
+            })
+            .catch(function(err) {
+                alert('Camera access denied: ' + err.message);
+            });
+    });
+
+    document.getElementById('capture-btn').addEventListener('click', function() {
+        const video = document.getElementById('camera-preview');
+        const canvas = document.getElementById('photo-canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64
+        const base64Image = canvas.toDataURL('image/jpeg');
+        document.getElementById('profile_base64').value = base64Image;
+        
+        // Show preview
+        const img = document.querySelector('.profile-avatar');
+        img.src = base64Image;
+        
+        // Stop camera
+        video.srcObject.getTracks().forEach(track => track.stop());
+        document.getElementById('camera-container').classList.add('d-none');
+    });
     </script>
 </body>
 </html>

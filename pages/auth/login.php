@@ -230,12 +230,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
                                         <label class="form-check-label" for="remember">Remember me</label>
                                     </div>
-
-                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
                                         <a href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php"><i class="bi bi-box-arrow-in-right me-2"></i> Sign In</a>
-                                    </button>
 
-                                    
                                     <div class="text-center mb-4">
                                         <span class="text-muted">Or sign in with</span>
                                     </div>
