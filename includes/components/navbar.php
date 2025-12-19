@@ -61,7 +61,7 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
 
                 <li class="nav-item">
                     <a class="nav-link <?php echo (strpos($currentDir, 'tailor') !== false && $currentPage != 'dashboard.php') ? 'active' : ''; ?>" 
-                    href="<?php echo SITE_URL; ?>/pages/tailors/index.php">
+                    href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php">
                         <i class="bi bi-person-badge me-1"></i> Find Tailors
                     </a>
                 </li>
