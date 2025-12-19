@@ -8,12 +8,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
 }
 
 
-// Define SITE_URL if not defined
-if (!defined('SITE_URL')) {
-    define('SITE_URL', 'http://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['PHP_SELF'])));
-    // Clean up the URL
-    $SITE_URL = rtrim(SITE_URL, '/');
-}
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
@@ -29,17 +23,6 @@ $product = new Product();
 
 $tailorId = $_SESSION['user_id'];
 
-// Get user data
-$userData = $user->getUserById($tailorId);
-if (!$userData) {
-    // Fallback if user not found
-    $userData = [
-        'full_name' => $_SESSION['full_name'] ?? 'Tailor',
-        'profile_pic' => $_SESSION['profile_pic'] ?? 'default.jpg',
-        'email' => $_SESSION['email'] ?? '',
-        'phone' => $_SESSION['phone'] ?? ''
-    ];
-}
 
 // Get statistics using EXISTING methods from your classes
 try {
