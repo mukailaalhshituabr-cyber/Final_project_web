@@ -1,5 +1,5 @@
 <?php
-/*// Start session if not already started
+// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -186,223 +186,194 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
     </div>
 </nav>
 
-<style>
-.navbar {
-    padding: 0.5rem 0;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-}
 
-.navbar-brand {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #667eea !important;
-}
+    <style>
+        .navbar { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); }
+        .nav-link { font-weight: 500; color: #4a5568; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s ease; }
+        .nav-link:hover { color: #667eea; background: rgba(102, 126, 234, 0.1); }
+        .dropdown-menu { border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 15px; padding: 0.5rem; }
+        .dropdown-item { border-radius: 8px; padding: 0.5rem 1rem; margin: 0.25rem 0; }
+        .dropdown-item:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+        .fixed-bottom { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); border-top: 1px solid rgba(0,0,0,0.1); }
 
-.nav-link {
-    font-weight: 500;
-    padding: 0.75rem 1.25rem !important;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    color: #4a5568 !important;
-    position: relative;
-    margin: 0 0.25rem;
-}
 
-.nav-link:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea !important;
-    transform: translateY(-2px);
-}
-
-.nav-link.active {
-    color: #667eea !important;
-    font-weight: 600;
-    background: rgba(102, 126, 234, 0.1);
-}
-
-.nav-link.active::after {
-    content: '';
-    position: absolute;
-    bottom: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
-    background: #667eea;
-    border-radius: 3px;
-}
-
-.dropdown-menu {
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    border-radius: 12px;
-    padding: 0.5rem 0;
-    margin-top: 0.5rem;
-    min-width: 250px;
-    border: 1px solid rgba(0,0,0,0.1);
-}
-
-.dropdown-header {
-    color: #667eea;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
-    font-size: 0.85rem;
-}
-
-.dropdown-item {
-    padding: 0.75rem 1.5rem;
-    transition: all 0.3s ease;
-    color: #4a5568;
-    border-radius: 0;
-}
-
-.dropdown-item:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
-    padding-left: 2rem;
-}
-
-.dropdown-item i {
-    width: 20px;
-    text-align: center;
-}
-
-.input-group {
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-}
-
-.input-group input {
-    border: none;
-    padding: 0.75rem 1rem;
-}
-
-.input-group input:focus {
-    box-shadow: none;
-    border: none;
-}
-
-.input-group .btn {
-    border: none;
-    background: #f7fafc;
-    padding: 0.75rem 1rem;
-}
-
-.input-group .btn:hover {
-    background: #edf2f7;
-}
-
-.btn-outline-primary {
-    border-color: #667eea;
-    color: #667eea;
-    padding: 0.5rem 1rem;
-    transition: all 0.3s ease;
-}
-
-.btn-outline-primary:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    padding: 0.5rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-}
-
-.badge {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
-    min-width: 20px;
-    min-height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-@media (max-width: 992px) {
-    .navbar-nav {
-        padding: 1rem 0;
-        text-align: center;
-    }
-    
-    .nav-link {
-        margin: 0.25rem 0;
-        display: inline-block;
-        width: auto;
-    }
-    
-    .nav-link.active::after {
-        display: none;
-    }
-    
-    .d-flex {
-        justify-content: center;
-        margin-top: 1rem;
-        width: 100%;
-    }
-    
-    .input-group {
-        margin: 1rem auto;
-        max-width: 100%;
-        order: 3;
-        width: 100%;
-    }
-    
-    .dropdown-menu {
-        text-align: center;
-        margin: 0.5rem auto;
-        width: 90%;
-    }
-    
-    .search-form {
-        order: 3;
-        width: 100%;
-        margin: 1rem 0;
-    }
-}
-
-@media (max-width: 576px) {
     .navbar-brand {
         font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea !important;
     }
-    
-    .btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9rem;
-    }
-    
-    .nav-link {
-        padding: 0.5rem 1rem !important;
-        font-size: 0.9rem;
-    }
-    
-    .dropdown-menu {
-        font-size: 0.9rem;
-    }
-}
 
-@keyframes bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
 
-.badge.bg-danger {
-    animation: bounce 0.3s ease;
-}
+
+    .nav-link.active {
+        color: #667eea !important;
+        font-weight: 600;
+        background: rgba(102, 126, 234, 0.1);
+    }
+
+    .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 20px;
+        height: 3px;
+        background: #667eea;
+        border-radius: 3px;
+    }
+
+
+
+    .dropdown-header {
+        color: #667eea;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        font-size: 0.85rem;
+    }
+
+
+
+    .dropdown-item i {
+        width: 20px;
+        text-align: center;
+    }
+
+    .input-group {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .input-group input {
+        border: none;
+        padding: 0.75rem 1rem;
+    }
+
+    .input-group input:focus {
+        box-shadow: none;
+        border: none;
+    }
+
+    .input-group .btn {
+        border: none;
+        background: #f7fafc;
+        padding: 0.75rem 1rem;
+    }
+
+    .input-group .btn:hover {
+        background: #edf2f7;
+    }
+
+    .btn-outline-primary {
+        border-color: #667eea;
+        color: #667eea;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-primary:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.5rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 20px;
+        min-height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 992px) {
+        .navbar-nav {
+            padding: 1rem 0;
+            text-align: center;
+        }
+        
+        .nav-link {
+            margin: 0.25rem 0;
+            display: inline-block;
+            width: auto;
+        }
+        
+        .nav-link.active::after {
+            display: none;
+        }
+        
+        .d-flex {
+            justify-content: center;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        
+        .input-group {
+            margin: 1rem auto;
+            max-width: 100%;
+            order: 3;
+            width: 100%;
+        }
+        
+        .dropdown-menu {
+            text-align: center;
+            margin: 0.5rem auto;
+            width: 90%;
+        }
+        
+        .search-form {
+            order: 3;
+            width: 100%;
+            margin: 1rem 0;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .navbar-brand {
+            font-size: 1.5rem;
+        }
+        
+        .btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+        }
+        
+        .nav-link {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.9rem;
+        }
+        
+        .dropdown-menu {
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Animation for cart badge */
+    @keyframes bounce {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+
+    .badge.bg-danger {
+        animation: bounce 0.3s ease;
+    }
 </style>
 
 <script>
@@ -460,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <?php
-// Check if user is logged in
+/*// Check if user is logged in
 $isLoggedIn = isset($_SESSION['user_id']);
 $userType = $_SESSION['user_type'] ?? '';
 $userName = $_SESSION['full_name'] ?? '';
@@ -648,7 +619,7 @@ $userName = $_SESSION['full_name'] ?? '';
 
 
 //1111111111111111111111111111111111111111111111
-// Start session if not already started
+/*// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -894,3 +865,4 @@ if (isset($_SESSION['user_id'])) {
     .dropdown-item:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
     .fixed-bottom { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); border-top: 1px solid rgba(0,0,0,0.1); }
 </style>
+*/
