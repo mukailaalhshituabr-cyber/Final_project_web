@@ -271,37 +271,35 @@ class ProductFunctions {
     private function uploadProductImages($files) {
         $uploadedFilenames = [];
         
-        // Create upload directory if it doesn't exist
-        $uploadDir = UPLOAD_PATH . PRODUCT_IMAGES;
+        // 1. Define and prepare the directory BEFORE the loop
+        $uploadDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/products/';
+        
         if (!is_dir($uploadDir)) {
+            // Create with 0777 so PHP owns it and can write to it
             mkdir($uploadDir, 0777, true);
         }
-        
+
+        // 2. Loop through the files
         for ($i = 0; $i < count($files['images']['name']); $i++) {
             if ($files['images']['error'][$i] === UPLOAD_ERR_OK) {
+                
                 // Generate unique filename
-                $extension = pathinfo($files['images']['name'][$i], PATHINFO_EXTENSION);
+                $extension = strtolower(pathinfo($files['images']['name'][$i], PATHINFO_EXTENSION));
                 $filename = uniqid() . '_' . time() . '_' . $i . '.' . $extension;
                 $targetPath = $uploadDir . $filename;
                 
-                // Move uploaded file
+                // 3. Move uploaded file (Only call this ONCE)
                 if (move_uploaded_file($files['images']['tmp_name'][$i], $targetPath)) {
-                    $targetDir = '/home/mukaila.shittu/public_html/Final_project_web/assets/images/products/';
-                    if (!is_dir($targetDir)) {
-                        mkdir($targetDir, 0777, true); // PHP creates and owns the folder
-                    }
+                    // Set file permissions so the web browser can see it
+                    @chmod($targetPath, 0644);
+                    
                     // Resize image for optimization
                     $this->resizeProductImage($targetPath);
                     $uploadedFilenames[] = $filename;
-                }
-
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
-                    // Success logic
                 } else {
-                    // Check if the directory is actually writable
-                    if (!is_writable(dirname($targetPath))) {
-                        error_log("Directory not writable: " . dirname($targetPath));
-                    }
+                    // If it fails, log WHY for debugging
+                    $reason = is_writable($uploadDir) ? "Server restriction" : "Folder not writable";
+                    error_log("Upload failed for $filename: $reason");
                 }
             }
         }
