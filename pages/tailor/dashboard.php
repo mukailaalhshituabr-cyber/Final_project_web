@@ -7,6 +7,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
     exit();
 }
 
+
+// Define SITE_URL if not defined
+if (!defined('SITE_URL')) {
+    define('SITE_URL', 'http://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['PHP_SELF'])));
+    // Clean up the URL
+    $SITE_URL = rtrim(SITE_URL, '/');
+}
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
