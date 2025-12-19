@@ -1,5 +1,5 @@
 <?php
-// Start session if not already started
+/*// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -165,11 +165,8 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
                             <i class="bi bi-gear me-2"></i> Settings
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
-
-
                         
-                        <li><a class="dropdown-item text-danger <?php echo (strpos($currentDir, 'auth') !== false || $currentPage == 'login.php') ? 'active' : ''; ?>" 
-                            href="<?php echo SITE_URL; ?>/pages/auth/login.php">
+                        <li><a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/login.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a></li>
                     </ul>
@@ -336,7 +333,6 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
     justify-content: center;
 }
 
-/* Mobile Responsive */
 @media (max-width: 992px) {
     .navbar-nav {
         padding: 1rem 0;
@@ -399,7 +395,6 @@ $currentDir = dirname($_SERVER['PHP_SELF']);
     }
 }
 
-/* Animation for cart badge */
 @keyframes bounce {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.2); }
@@ -465,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <?php
-/*// Check if user is logged in
+// Check if user is logged in
 $isLoggedIn = isset($_SESSION['user_id']);
 $userType = $_SESSION['user_type'] ?? '';
 $userName = $_SESSION['full_name'] ?? '';
@@ -653,7 +648,7 @@ $userName = $_SESSION['full_name'] ?? '';
 
 
 //1111111111111111111111111111111111111111111111
-/*// Start session if not already started
+// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -899,4 +894,3 @@ if (isset($_SESSION['user_id'])) {
     .dropdown-item:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
     .fixed-bottom { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); border-top: 1px solid rgba(0,0,0,0.1); }
 </style>
-*/
