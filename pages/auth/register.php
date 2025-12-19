@@ -1,7 +1,418 @@
-2. pages/auth/register.php:
-php
 <?php
 require_once '../../config.php';
+require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/User.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    $dashboardPath = '../../pages/' . $_SESSION['user_type'] . '/dashboard.php';
+    if (file_exists($dashboardPath)) {
+        header('Location: ' . $dashboardPath);
+        exit();
+    }
+}
+
+$error = '';
+$success = '';
+$userType = $_GET['type'] ?? 'customer';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Collect data
+    $data = [
+        'username' => trim($_POST['username'] ?? ''),
+        'email' => trim($_POST['email'] ?? ''),
+        'password' => $_POST['password'] ?? '',
+        'confirm_password' => $_POST['confirm_password'] ?? '',
+        'full_name' => trim($_POST['full_name'] ?? ''),
+        'user_type' => $_POST['user_type'] ?? 'customer',
+        'phone' => trim($_POST['phone'] ?? ''),
+        'address' => trim($_POST['address'] ?? ''),
+        'bio' => trim($_POST['bio'] ?? '')
+    ];
+    
+    // Validate
+    $errors = [];
+    if (empty($data['full_name'])) $errors[] = 'Full name is required';
+    if (empty($data['username'])) $errors[] = 'Username is required';
+    if (empty($data['email'])) $errors[] = 'Email is required';
+    if (empty($data['password'])) $errors[] = 'Password is required';
+    if ($data['password'] !== $data['confirm_password']) $errors[] = 'Passwords do not match';
+    if (strlen($data['password']) < 6) $errors[] = 'Password must be at least 6 characters';
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email format';
+    if (!in_array($data['user_type'], ['customer', 'tailor'])) $errors[] = 'Invalid user type';
+    
+    if (empty($errors)) {
+        $user = new User();
+        $result = $user->register($data);
+        
+        if (is_numeric($result)) {
+            // Registration successful - redirect to login with success message
+            header('Location: login.php?success=1');
+            exit();
+        } else {
+            $error = $result;
+        }
+    } else {
+        $error = implode('<br>', $errors);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - <?php echo htmlspecialchars(SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .register-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .register-left {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .register-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2rem;
+        }
+        
+        .user-type-card {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .user-type-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+        
+        .user-type-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .password-strength {
+            height: 5px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background: #dc3545;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .register-left {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="register-card">
+                    <div class="row g-0">
+                        <!-- Left Side -->
+                        <div class="col-lg-6 d-none d-lg-block">
+                            <div class="register-left">
+                                <div class="register-logo">
+                                    <i class="bi bi-shop me-2"></i><?php echo htmlspecialchars(SITE_NAME); ?>
+                                </div>
+                                <h2 class="fw-bold mb-4">Join Our Community</h2>
+                                <p class="text-muted mb-4">Create an account to start your fashion journey.</p>
+                                
+                                <ul class="list-unstyled">
+                                    <?php if ($userType == 'customer'): ?>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Browse custom designs</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Track your measurements</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Get perfect fitting clothes</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Secure payments</li>
+                                    <?php else: ?>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Showcase your designs</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Reach global customers</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Manage orders easily</li>
+                                    <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Get paid securely</li>
+                                    <?php endif; ?>
+                                </ul>
+                                
+                                <div class="mt-5">
+                                    <p class="text-muted mb-2">Already have an account?</p>
+                                    <a href="login.php" class="btn btn-outline-primary">
+                                        Sign In <i class="bi bi-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side -->
+                        <div class="col-lg-6">
+                            <div class="p-4 p-md-5">
+                                <div class="text-center mb-4">
+                                    <h2 class="fw-bold mb-2">Create Account</h2>
+                                    <p class="text-muted">Join our fashion community today</p>
+                                </div>
+                                
+                                <?php if (!empty($error)): ?>
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <?php echo $error; ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <form method="POST" action="" novalidate>
+                                    <!-- User Type Selection -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold mb-3">I want to join as:</label>
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <div class="user-type-card <?php echo $userType == 'customer' ? 'selected' : ''; ?>" 
+                                                     onclick="selectUserType('customer')">
+                                                    <i class="bi bi-person display-6 text-primary mb-3"></i>
+                                                    <h6 class="fw-bold mb-2">Customer</h6>
+                                                    <p class="small text-muted">Buy custom clothing</p>
+                                                    <input type="radio" name="user_type" value="customer" 
+                                                           <?php echo $userType == 'customer' ? 'checked' : ''; ?> hidden>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="user-type-card <?php echo $userType == 'tailor' ? 'selected' : ''; ?>" 
+                                                     onclick="selectUserType('tailor')">
+                                                    <i class="bi bi-scissors display-6 text-primary mb-3"></i>
+                                                    <h6 class="fw-bold mb-2">Tailor</h6>
+                                                    <p class="small text-muted">Sell your designs</p>
+                                                    <input type="radio" name="user_type" value="tailor" 
+                                                           <?php echo $userType == 'tailor' ? 'checked' : ''; ?> hidden>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Basic Information -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Full Name *</label>
+                                            <input type="text" class="form-control" name="full_name" 
+                                                   value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>" 
+                                                   placeholder="John Doe" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Username *</label>
+                                            <input type="text" class="form-control" name="username" 
+                                                   value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" 
+                                                   placeholder="johndoe" required>
+                                            <small class="form-text text-muted">This will be your public username</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Contact Information -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email Address *</label>
+                                            <input type="email" class="form-control" name="email" 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
+                                                   placeholder="your@email.com" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" name="phone" 
+                                                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>" 
+                                                   placeholder="+234 801 234 5678">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Password -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Password *</label>
+                                            <input type="password" class="form-control" name="password" 
+                                                   id="password" placeholder="At least 6 characters" required>
+                                            <div class="password-strength">
+                                                <div class="password-strength-bar" id="passwordStrength"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Confirm Password *</label>
+                                            <input type="password" class="form-control" name="confirm_password" 
+                                                   placeholder="Confirm your password" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Address -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Address</label>
+                                        <textarea class="form-control" name="address" rows="2" 
+                                                  placeholder="Your address (optional)"><?php echo htmlspecialchars($_POST['address'] ?? ''); ?></textarea>
+                                    </div>
+                                    
+                                    <!-- Tailor Bio (only for tailors) -->
+                                    <div id="tailorBioSection" class="mb-3" style="<?php echo $userType == 'tailor' ? '' : 'display: none;' ?>">
+                                        <label class="form-label">Bio / Introduction</label>
+                                        <textarea class="form-control" name="bio" rows="3" 
+                                                  placeholder="Tell us about your tailoring experience..."><?php echo htmlspecialchars($_POST['bio'] ?? ''); ?></textarea>
+                                        <small class="form-text text-muted">This will be displayed on your tailor profile</small>
+                                    </div>
+                                    
+                                    <!-- Terms -->
+                                    <div class="mb-4 form-check">
+                                        <input type="checkbox" class="form-check-input" id="terms" required>
+                                        <label class="form-check-label" for="terms">
+                                            I agree to the <a href="#" class="text-decoration-none">Terms</a> 
+                                            and <a href="#" class="text-decoration-none">Privacy Policy</a>
+                                        </label>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                                        <i class="bi bi-person-plus me-2"></i> Create Account
+                                    </button>
+                                    
+                                    <div class="text-center">
+                                        <p class="text-muted mb-0">Already have an account? 
+                                            <a href="login.php" class="text-decoration-none fw-bold">Sign In</a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // User type selection
+        function selectUserType(type) {
+            document.querySelectorAll('.user-type-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            document.querySelector(`.user-type-card[onclick="selectUserType('${type}')"]`).classList.add('selected');
+            document.querySelector(`input[name="user_type"][value="${type}"]`).checked = true;
+            
+            // Show/hide tailor bio section
+            const bioSection = document.getElementById('tailorBioSection');
+            if (type === 'tailor') {
+                bioSection.style.display = 'block';
+            } else {
+                bioSection.style.display = 'none';
+            }
+        }
+        
+        // Password strength indicator
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const strengthBar = document.getElementById('passwordStrength');
+            let strength = 0;
+            
+            if (password.length >= 6) strength += 25;
+            if (/[A-Z]/.test(password)) strength += 25;
+            if (/[0-9]/.test(password)) strength += 25;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+            
+            strengthBar.style.width = strength + '%';
+            
+            // Change color
+            if (strength < 50) {
+                strengthBar.style.backgroundColor = '#dc3545';
+            } else if (strength < 75) {
+                strengthBar.style.backgroundColor = '#ffc107';
+            } else {
+                strengthBar.style.backgroundColor = '#28a745';
+            }
+        });
+        
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.querySelector('input[name="confirm_password"]').value;
+            const terms = document.getElementById('terms').checked;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match');
+                return false;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters');
+                return false;
+            }
+            
+            if (!terms) {
+                e.preventDefault();
+                alert('You must agree to the terms and conditions');
+                return false;
+            }
+            
+            return true;
+        });
+    </script>
+</body>
+</html>
+
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -440,7 +851,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <?php
-/*require_once '../../config.php';
+require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 // Start session if not started

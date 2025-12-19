@@ -9,7 +9,7 @@ class User {
     }
     
     // Register new user
-    public function register($data) {
+    /*public function register($data) {
         // Validate required fields
         $required = ['username', 'email', 'password', 'user_type', 'full_name'];
         foreach ($required as $field) {
@@ -55,7 +55,7 @@ class User {
         }
         
         return false;
-    }
+    }*/
     
     // Login user
     public function login($email, $password) {
@@ -460,6 +460,51 @@ class User {
         // Continue with your upload logic...
     }
 
+    public function register($data) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Check if email already exists
+            $this->db->query("SELECT id FROM users WHERE email = :email");
+            $this->db->bind(':email', $data['email']);
+            if ($this->db->single()) {
+                return "Email already registered";
+            }
+            
+            // Check if username already exists
+            $this->db->query("SELECT id FROM users WHERE username = :username");
+            $this->db->bind(':username', $data['username']);
+            if ($this->db->single()) {
+                return "Username already taken";
+            }
+            
+            // Insert user
+            $this->db->query("INSERT INTO users (username, email, password, full_name, user_type, phone, address, bio) 
+                            VALUES (:username, :email, :password, :full_name, :user_type, :phone, :address, :bio)");
+            
+            $this->db->bind(':username', $data['username']);
+            $this->db->bind(':email', $data['email']);
+            $this->db->bind(':password', password_hash($data['password'], PASSWORD_DEFAULT));
+            $this->db->bind(':full_name', $data['full_name']);
+            $this->db->bind(':user_type', $data['user_type']);
+            $this->db->bind(':phone', $data['phone'] ?? null);
+            $this->db->bind(':address', $data['address'] ?? null);
+            $this->db->bind(':bio', $data['bio'] ?? null);
+            
+            if ($this->db->execute()) {
+                $userId = $this->db->lastInsertId();
+                $this->db->commit();
+                return $userId;
+            }
+            
+            $this->db->rollBack();
+            return "Registration failed";
+            
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return "Database error: " . $e->getMessage();
+        }
+    }
 
 }
 ?>

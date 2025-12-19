@@ -37,6 +37,32 @@ $recentOrders = $orderObj->getRecentOrders($_SESSION['user_id'], 5); // Uses exi
 $recentUsers = method_exists($userObj, 'getRecentUsers') ? $userObj->getRecentUsers(5) : [];
 $recentProducts = method_exists($productObj, 'getRecentProducts') ? $productObj->getRecentProducts(5) : [];
 
+
+// create_admin.php - Run once then delete
+require_once 'config.php';
+require_once 'includes/classes/Database.php';
+
+$db = Database::getInstance();
+$password = password_hash('Admin123!', PASSWORD_DEFAULT);
+
+$db->query("INSERT INTO users (username, email, password, full_name, user_type, created_at) 
+           VALUES (:username, :email, :password, :full_name, :user_type, NOW())");
+
+$db->bind(':username', 'admin');
+$db->bind(':email', 'admin@' . strtolower(SITE_NAME) . '.com');
+$db->bind(':password', $password);
+$db->bind(':full_name', 'Administrator');
+$db->bind(':user_type', 'admin');
+
+if ($db->execute()) {
+    echo "Admin user created successfully!<br>";
+    echo "Username: admin<br>";
+    echo "Password: Admin123!<br>";
+    echo "IMPORTANT: Delete this file after use!";
+} else {
+    echo "Failed to create admin user";
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

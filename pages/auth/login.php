@@ -1,5 +1,441 @@
 <?php
 require_once '../../config.php';
+require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/User.php';
+
+// Force session start at the VERY BEGINNING
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if already logged in
+if (isset($_SESSION['user_id'])) {
+    $dashboardPath = '../../pages/' . $_SESSION['user_type'] . '/dashboard.php';
+    if (file_exists($dashboardPath)) {
+        header('Location: ' . $dashboardPath);
+        exit();
+    }
+}
+
+$error = '';
+$success = isset($_GET['success']) ? 'Registration successful! Please login.' : '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($email) || empty($password)) {
+        $error = 'Please fill in all fields';
+    } else {
+        $user = new User();
+        $userData = $user->login($email, $password);
+        
+        if ($userData) {
+            // Verify user_type is valid
+            if (!in_array($userData['user_type'], ['customer', 'tailor', 'admin'])) {
+                $error = 'Invalid account type';
+            } else {
+                // Set session variables
+                $_SESSION['user_id'] = $userData['id'];
+                $_SESSION['user_type'] = $userData['user_type'];
+                $_SESSION['full_name'] = $userData['full_name'];
+                $_SESSION['email'] = $userData['email'];
+                $_SESSION['username'] = $userData['username'];
+                
+                // Store user type in session for debugging
+                $_SESSION['debug_user_type'] = $userData['user_type'];
+                
+                // Redirect based on user type
+                $redirectPath = '../../pages/' . $userData['user_type'] . '/dashboard.php';
+                
+                // Debug: Check if file exists
+                if (!file_exists($redirectPath)) {
+                    // Create dashboard if it doesn't exist
+                    switch ($userData['user_type']) {
+                        case 'customer':
+                            $redirectPath = '../../pages/customer/dashboard.php';
+                            break;
+                        case 'tailor':
+                            $redirectPath = '../../pages/tailor/dashboard.php';
+                            break;
+                        case 'admin':
+                            $redirectPath = '../../pages/admin/dashboard.php';
+                            break;
+                    }
+                }
+                
+                // Debug output
+                error_log("Login successful - User: {$userData['id']}, Type: {$userData['user_type']}, Redirect: $redirectPath");
+                
+                // Immediate redirect
+                header('Location: ' . $redirectPath);
+                exit();
+            }
+        } else {
+            $error = 'Invalid email or password';
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - <?php echo htmlspecialchars(SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .login-left {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .login-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-list li {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-list i {
+            color: #667eea;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .user-type-selector {
+            margin-bottom: 1.5rem;
+        }
+        
+        .user-type-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            background: white;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+        
+        .user-type-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .user-type-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        #adminLoginForm {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .login-left {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="login-card">
+                    <div class="row g-0">
+                        <!-- Left Side -->
+                        <div class="col-lg-6 d-none d-lg-block">
+                            <div class="login-left">
+                                <div class="login-logo">
+                                    <i class="bi bi-shop me-2"></i><?php echo htmlspecialchars(SITE_NAME); ?>
+                                </div>
+                                <h2 class="fw-bold mb-4">Welcome Back!</h2>
+                                <p class="text-muted mb-4">Sign in to access your personalized dashboard.</p>
+                                
+                                <ul class="feature-list list-unstyled">
+                                    <li><i class="bi bi-check-circle-fill"></i>Track your orders</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Manage your profile</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Connect with tailors</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Get recommendations</li>
+                                </ul>
+                                
+                                <div class="mt-5">
+                                    <p class="text-muted mb-2">New to <?php echo htmlspecialchars(SITE_NAME); ?>?</p>
+                                    <a href="register.php" class="btn btn-outline-primary">
+                                        Create Account <i class="bi bi-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side -->
+                        <div class="col-lg-6">
+                            <div class="p-4 p-md-5">
+                                <div class="text-center mb-4">
+                                    <h2 class="fw-bold mb-2">Sign In</h2>
+                                    <p class="text-muted">Enter your credentials to continue</p>
+                                </div>
+                                
+                                <?php if (!empty($success)): ?>
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <?php echo htmlspecialchars($success); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($error)): ?>
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <?php echo htmlspecialchars($error); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <!-- User Type Selector -->
+                                <div class="user-type-selector">
+                                    <div class="d-flex gap-2 mb-3">
+                                        <button type="button" class="btn user-type-btn active" data-type="customer">
+                                            <i class="bi bi-person me-2"></i>Customer
+                                        </button>
+                                        <button type="button" class="btn user-type-btn" data-type="tailor">
+                                            <i class="bi bi-scissors me-2"></i>Tailor
+                                        </button>
+                                        <button type="button" class="btn user-type-btn" data-type="admin">
+                                            <i class="bi bi-shield-check me-2"></i>Admin
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Customer/Tailor Login Form -->
+                                <form method="POST" action="" id="regularLoginForm">
+                                    <input type="hidden" name="user_type" id="loginUserType" value="customer">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                            <input type="email" class="form-control" name="email" 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
+                                                   placeholder="your@email.com" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                            <input type="password" class="form-control" name="password" 
+                                                   id="passwordField" placeholder="Enter your password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                        <label class="form-check-label" for="remember">Remember me</label>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+                                    </button>
+                                    
+                                    <div class="text-center mb-3">
+                                        <a href="forgot-password.php" class="text-decoration-none">
+                                            Forgot Password?
+                                        </a>
+                                    </div>
+                                </form>
+                                
+                                <!-- Admin Login Form -->
+                                <form method="POST" action="" id="adminLoginForm">
+                                    <input type="hidden" name="user_type" value="admin">
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-shield-exclamation me-2"></i>
+                                        Admin login requires special credentials
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Admin Email</label>
+                                        <input type="email" class="form-control" name="email" 
+                                               placeholder="admin@<?php echo strtolower(SITE_NAME); ?>.com" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Admin Password</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" name="password" 
+                                                   placeholder="Admin password" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="toggleAdminPassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-danger w-100 py-2">
+                                        <i class="bi bi-shield-check me-2"></i> Admin Login
+                                    </button>
+                                </form>
+                                
+                                <div class="text-center mt-4">
+                                    <p class="text-muted mb-0">Don't have an account? 
+                                        <a href="register.php" class="text-decoration-none fw-bold">Sign Up</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // User type switching
+            const userTypeBtns = document.querySelectorAll('.user-type-btn');
+            const regularForm = document.getElementById('regularLoginForm');
+            const adminForm = document.getElementById('adminLoginForm');
+            const loginUserType = document.getElementById('loginUserType');
+            
+            userTypeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    
+                    // Update active button
+                    userTypeBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update hidden field
+                    loginUserType.value = type;
+                    
+                    // Show appropriate form
+                    if (type === 'admin') {
+                        regularForm.style.display = 'none';
+                        adminForm.style.display = 'block';
+                    } else {
+                        regularForm.style.display = 'block';
+                        adminForm.style.display = 'none';
+                        // Update form text based on user type
+                        const submitBtn = regularForm.querySelector('button[type="submit"]');
+                        if (type === 'tailor') {
+                            submitBtn.innerHTML = '<i class="bi bi-scissors me-2"></i> Tailor Login';
+                        } else {
+                            submitBtn.innerHTML = '<i class="bi bi-person me-2"></i> Customer Login';
+                        }
+                    }
+                });
+            });
+            
+            // Toggle password visibility
+            function setupPasswordToggle(buttonId, fieldId) {
+                const toggleBtn = document.getElementById(buttonId);
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function() {
+                        const field = document.getElementById(fieldId) || 
+                                     document.querySelector('input[name="password"]');
+                        const icon = this.querySelector('i');
+                        
+                        if (field.type === 'password') {
+                            field.type = 'text';
+                            icon.classList.remove('bi-eye');
+                            icon.classList.add('bi-eye-slash');
+                        } else {
+                            field.type = 'password';
+                            icon.classList.remove('bi-eye-slash');
+                            icon.classList.add('bi-eye');
+                        }
+                    });
+                }
+            }
+            
+            setupPasswordToggle('togglePassword', 'passwordField');
+            setupPasswordToggle('toggleAdminPassword', 'adminPasswordField');
+            
+            // Form validation
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const email = this.querySelector('input[name="email"]').value;
+                    const password = this.querySelector('input[name="password"]').value;
+                    
+                    if (!email || !password) {
+                        e.preventDefault();
+                        alert('Please fill in all fields');
+                        return false;
+                    }
+                    
+                    // Additional validation
+                    if (password.length < 6) {
+                        e.preventDefault();
+                        alert('Password must be at least 6 characters');
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+<?php
+/*require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -230,8 +666,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
                                         <label class="form-check-label" for="remember">Remember me</label>
                                     </div>
-                                        <a href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php"><i class="bi bi-box-arrow-in-right me-2"></i> Sign In</a>
-
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+                                    </button>
+                                    
                                     <div class="text-center mb-4">
                                         <span class="text-muted">Or sign in with</span>
                                     </div>
@@ -294,7 +733,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <?php
-/*require_once '../../config.php';
+require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 // Start session if not started
