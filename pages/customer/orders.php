@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     exit();
 }
 
+
 $userId = $_SESSION['user_id'];
 $order = new Order();
 
@@ -18,6 +19,32 @@ if ($status !== 'all') {
     $orders = $order->getOrdersByCustomer($userId, $status);
 } else {
     $orders = $order->getOrdersByCustomer($userId);
+}
+
+
+// In pages/customer/orders.php - REPLACE the Get orders section:
+
+// Get orders - Use existing methods
+$status = $_GET['status'] ?? 'all';
+$allOrders = $orderObj->getRecentOrders($userId, 100); // Get many orders
+
+// Filter by status if needed
+$orders = [];
+if ($status === 'all') {
+    $orders = $allOrders;
+} else {
+    foreach ($allOrders as $order) {
+        if ($order['status'] === $status) {
+            $orders[] = $order;
+        }
+    }
+}
+
+// Get tailor names for each order
+foreach ($orders as &$orderItem) {
+    $orderDetails = $orderObj->getOrderById($orderItem['id']);
+    $orderItem['tailor_name'] = $orderDetails['customer_name'] ?? 'Unknown Tailor';
+    $orderItem['item_count'] = count($orderDetails['items'] ?? []);
 }
 ?>
 <!DOCTYPE html>

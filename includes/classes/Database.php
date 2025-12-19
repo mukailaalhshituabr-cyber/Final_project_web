@@ -1,6 +1,3 @@
-
-UPDATED includes/classes/Database.php (with your DB structure):
-php
 <?php
 // File: includes/classes/Database.php
 

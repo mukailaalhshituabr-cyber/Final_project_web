@@ -223,6 +223,56 @@ class Order {
         
         return $this->db->resultSet();
     }
+
+    // Add to includes/classes/Order.php after existing methods
+
+    
+    public function getOrdersByCustomer($customerId, $status = null) {
+        $sql = "SELECT o.*, u.full_name as tailor_name, u.profile_pic as tailor_avatar 
+                FROM orders o 
+                LEFT JOIN users u ON o.tailor_id = u.id 
+                WHERE o.customer_id = :customer_id";
+        
+        if ($status) {
+            $sql .= " AND o.status = :status";
+        }
+        
+        $sql .= " ORDER BY o.created_at DESC";
+        
+        $this->db->query($sql);
+        $this->db->bind(':customer_id', $customerId);
+        
+        if ($status) {
+            $this->db->bind(':status', $status);
+        }
+        
+        return $this->db->resultSet();
+    }
+
+    
+    public function getOrderDetails($orderId, $customerId) {
+        $this->db->query("SELECT o.*, u.full_name as tailor_name, u.email as tailor_email,
+                                u.phone as tailor_phone
+                        FROM orders o 
+                        LEFT JOIN users u ON o.tailor_id = u.id 
+                        WHERE o.id = :order_id AND o.customer_id = :customer_id");
+        $this->db->bind(':order_id', $orderId);
+        $this->db->bind(':customer_id', $customerId);
+        
+        $order = $this->db->single();
+        
+        if ($order) {
+            // Get order items
+            $this->db->query("SELECT oi.*, p.title, p.images, p.price 
+                            FROM order_items oi 
+                            LEFT JOIN products p ON oi.product_id = p.id 
+                            WHERE oi.order_id = :order_id");
+            $this->db->bind(':order_id', $orderId);
+            $order['items'] = $this->db->resultSet();
+        }
+        
+        return $order;
+    }
 }
 ?>
 

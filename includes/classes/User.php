@@ -90,7 +90,7 @@ class User {
         return $this->db->single();
     }
     
-    // Update profile
+    /*/ Update profile
     public function updateProfile($userId, $data) {
         if (!is_array($data)) {
             return false;
@@ -149,6 +149,31 @@ class User {
         }
         
         return $this->db->execute();
+    }*/
+
+    public function updateProfile($userId, $data) {
+        try {
+            $this->db->query("UPDATE users SET 
+                full_name = :full_name,
+                phone = :phone,
+                address = :address,
+                bio = :bio,
+                profile_pic = :profile_pic,
+                updated_at = NOW()
+                WHERE id = :id");
+            
+            $this->db->bind(':id', $userId);
+            $this->db->bind(':full_name', $data['full_name']);
+            $this->db->bind(':phone', $data['phone'] ?? null);
+            $this->db->bind(':address', $data['address'] ?? null);
+            $this->db->bind(':bio', $data['bio'] ?? null);
+            $this->db->bind(':profile_pic', $data['profile_pic'] ?? null);
+            
+            return $this->db->execute();
+        } catch (Exception $e) {
+            error_log("Profile update error: " . $e->getMessage());
+            return false;
+        }
     }
     
     // Update password
@@ -409,6 +434,33 @@ class User {
         $this->db->bind(':token', $token);
         return $this->db->single();
     }
+
+    // In your upload function, add this check:
+    public function uploadProfilePicture($file) {
+        $upload_dir = '../../assets/images/avatars/';
+        
+        // Ensure directory exists
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        // Check if writable
+        if (!is_writable($upload_dir)) {
+            // Try to change permissions
+            chmod($upload_dir, 0777);
+            
+            if (!is_writable($upload_dir)) {
+                return [
+                    'success' => false,
+                    'message' => 'Upload directory is not writable. Please check permissions.'
+                ];
+            }
+        }
+        
+        // Continue with your upload logic...
+    }
+
+
 }
 ?>
 

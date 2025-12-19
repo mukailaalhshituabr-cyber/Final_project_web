@@ -19,6 +19,15 @@ $db->query("SELECT p.* FROM products p
            WHERE w.user_id = :user_id AND p.status = 'active'");
 $db->bind(':user_id', $userId);
 $wishlistItems = $db->resultSet();
+
+$db = Database::getInstance();
+$db->query("SELECT p.*, u.full_name as tailor_name 
+           FROM products p 
+           JOIN wishlist w ON p.id = w.product_id 
+           JOIN users u ON p.tailor_id = u.id
+           WHERE w.user_id = :user_id AND p.status = 'active'");
+$db->bind(':user_id', $userId);
+$wishlistItems = $db->resultSet();
 ?>
 <!DOCTYPE html>
 <html lang="en">
