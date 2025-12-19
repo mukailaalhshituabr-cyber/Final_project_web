@@ -48,7 +48,7 @@ if ($currentCategory) {
         
         .hero-section {
             background: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95));
-            padding: 200px 0;
+            padding: 100px 0;
         }
         
         .product-card {
@@ -154,7 +154,7 @@ if ($currentCategory) {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         }
         
-        @media (max-width: 668px) {
+        @media (max-width: 768px) {
             .hero-section {
                 padding: 60px 0;
             }

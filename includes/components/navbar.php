@@ -282,7 +282,7 @@ if ($isLoggedIn) {
     padding: 0.25rem 0.5rem;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 892px) {
     .navbar-nav {
         padding: 1rem 0;
         text-align: center;
