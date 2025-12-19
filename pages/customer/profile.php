@@ -56,16 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic'];
         
         // Handle file upload
-        // REPLACE the file upload handling section with:
-
-        // Handle file upload
         if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
             $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
             $fileName = $_FILES['profile_pic']['name'];
             $fileSize = $_FILES['profile_pic']['size'];
+            $fileType = $_FILES['profile_pic']['type'];
             
             // Security checks
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             $maxFileSize = 5 * 1024 * 1024; // 5MB
             
             // Get file extension
@@ -76,43 +75,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "Invalid file type. Allowed: JPG, PNG, GIF, WebP.";
             } elseif ($fileSize > $maxFileSize) {
                 $error = "File too large. Maximum size is 5MB.";
+            } elseif (!in_array($fileType, $allowedMimeTypes)) {
+                $error = "Invalid file MIME type.";
             } else {
-                // Generate unique filename
-                $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
-                $dest_path = $avatarDir . $newFileName;
-                
-                // Check if destination directory is writable
-                if (!is_writable($avatarDir)) {
-                    // Try to fix permissions
-                    @chmod($avatarDir, 0755);
+                // Verify it's a real image
+                $imageInfo = @getimagesize($fileTmpPath);
+                if ($imageInfo === false) {
+                    $error = "Uploaded file is not a valid image.";
+                } else {
+                    // Generate unique filename
+                    $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
+                    $dest_path = $avatarDir . $newFileName;
                     
+                    // Sanitize filename
+                    $newFileName = preg_replace("/[^a-zA-Z0-9\._-]/", "", $newFileName);
+                    
+                    // Check if destination directory is writable
                     if (!is_writable($avatarDir)) {
-                        $error = "Upload directory is not writable. Current permissions: " . substr(sprintf('%o', fileperms($avatarDir)), -4);
-                    }
-                }
-                
-                if (empty($error)) {
-                    // Move uploaded file
-                    if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                        // Set proper permissions
-                        @chmod($dest_path, 0644);
-                        
-                        // Delete old profile picture if not default
-                        $oldProfilePic = $userData['profile_pic'];
-                        if ($oldProfilePic && $oldProfilePic != 'default.jpg') {
-                            $oldPath = $avatarDir . $oldProfilePic;
-                            if (file_exists($oldPath)) {
-                                @unlink($oldPath);
-                            }
-                        }
-                        
-                        $profile_pic = $newFileName;
+                        $error = "Upload directory is not writable. Please contact administrator.";
                     } else {
-                        $error = "Failed to move uploaded file. Check directory permissions.";
+                        // Move uploaded file
+                        if (move_uploaded_file($fileTmpPath, $dest_path)) {
+                            // Set proper permissions
+                            @chmod($dest_path, 0644);
+                            
+                            // Delete old profile picture if not default
+                            $oldProfilePic = $userData['profile_pic'];
+                            if ($oldProfilePic && $oldProfilePic != 'default.jpg' && file_exists($avatarDir . $oldProfilePic)) {
+                                @unlink($avatarDir . $oldProfilePic);
+                            }
+                            
+                            $profile_pic = $newFileName;
+                        } else {
+                            // Detailed error handling
+                            $uploadError = $_FILES['profile_pic']['error'];
+                            $errorMessages = [
+                                0 => 'There was an unexpected upload error.',
+                                1 => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+                                2 => 'The uploaded file exceeds the MAX_FILE_SIZE directive in the HTML form.',
+                                3 => 'The uploaded file was only partially uploaded.',
+                                4 => 'No file was uploaded.',
+                                6 => 'Missing a temporary folder.',
+                                7 => 'Failed to write file to disk.',
+                                8 => 'A PHP extension stopped the file upload.'
+                            ];
+                            $error = $errorMessages[$uploadError] ?? 'File upload failed. Check directory permissions.';
+                        }
                     }
                 }
             }
-        
         }
         
         // Only proceed with database update if no upload error

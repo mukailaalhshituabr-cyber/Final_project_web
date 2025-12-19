@@ -30,7 +30,135 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle profile picture upload
     $profilePic = $userData['profile_pic'] ?? 'default-avatar.png';
     
-    if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+    // In pages/customer/profile.php - REPLACE the file upload section starting around line 80:
+
+    // --- PROFILE UPDATE ---
+    if (isset($_POST['update_profile'])) {
+        $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic'];
+        
+        // DEBUG: Log what's happening
+        error_log("Profile update started for user $userId");
+        
+        // Handle file upload
+        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+            error_log("File upload detected: " . $_FILES['profile_pic']['name']);
+            
+            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
+            $fileName = $_FILES['profile_pic']['name'];
+            $fileSize = $_FILES['profile_pic']['size'];
+            
+            // Check if temp file exists
+            if (!file_exists($fileTmpPath)) {
+                $error = "Uploaded file not found in temp directory. Check PHP upload settings.";
+                error_log("Temp file doesn't exist: $fileTmpPath");
+            } else {
+                // Security checks
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                $maxFileSize = 5 * 1024 * 1024; // 5MB
+                
+                // Get file extension
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                
+                // Validate file
+                if (!in_array($fileExtension, $allowedExtensions)) {
+                    $error = "Invalid file type. Allowed: JPG, PNG, GIF, WebP.";
+                } elseif ($fileSize > $maxFileSize) {
+                    $error = "File too large. Maximum size is 5MB.";
+                } else {
+                    // Use RELATIVE path for web access
+                    $avatarDir = '../../assets/images/avatars/';
+                    $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
+                    $dest_path = $avatarDir . $newFileName;
+                    
+                    // Ensure directory exists
+                    if (!is_dir($avatarDir)) {
+                        if (!mkdir($avatarDir, 0755, true)) {
+                            $error = "Failed to create upload directory.";
+                            error_log("Failed to create directory: $avatarDir");
+                        }
+                    }
+                    
+                    if (empty($error)) {
+                        // Check directory permissions
+                        $perms = @fileperms($avatarDir);
+                        error_log("Directory permissions for $avatarDir: " . ($perms ? substr(sprintf('%o', $perms), -4) : 'UNKNOWN'));
+                        
+                        // Try to fix permissions if needed
+                        if (!is_writable($avatarDir)) {
+                            @chmod($avatarDir, 0755);
+                            error_log("Attempted to change permissions to 0755");
+                        }
+                        
+                        // Try to move the file
+                        if (move_uploaded_file($fileTmpPath, $dest_path)) {
+                            error_log("File moved successfully to: $dest_path");
+                            
+                            // Delete old profile picture if not default
+                            $oldProfilePic = $userData['profile_pic'];
+                            if ($oldProfilePic && $oldProfilePic != 'default.jpg') {
+                                $oldPath = $avatarDir . $oldProfilePic;
+                                if (file_exists($oldPath)) {
+                                    @unlink($oldPath);
+                                }
+                            }
+                            
+                            $profile_pic = $newFileName;
+                        } else {
+                            // Detailed error analysis
+                            $error = "Failed to move uploaded file. ";
+                            error_log("move_uploaded_file failed: $fileTmpPath to $dest_path");
+                            
+                            // Check specific issues
+                            if (!is_writable($avatarDir)) {
+                                $error .= "Directory not writable. ";
+                                error_log("Directory not writable: $avatarDir");
+                            }
+                            if (!is_writable(dirname($dest_path))) {
+                                $error .= "Parent directory not writable. ";
+                            }
+                            
+                            // Try alternative method
+                            if (copy($fileTmpPath, $dest_path)) {
+                                error_log("Used copy() as alternative - SUCCESS");
+                                $profile_pic = $newFileName;
+                                $error = ""; // Clear error
+                            } else {
+                                error_log("Alternative copy() also failed");
+                                $error .= "Please check server permissions.";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Only proceed with database update if no upload error
+        if (empty($error)) {
+            $updateData = [
+                'full_name'   => trim($_POST['full_name']),
+                'phone'       => trim($_POST['phone'] ?? ''),
+                'address'     => trim($_POST['address'] ?? ''),
+                'bio'         => trim($_POST['bio'] ?? ''),
+                'profile_pic' => $profile_pic
+            ];
+            
+            // Validate required fields
+            if (empty($updateData['full_name'])) {
+                $error = "Full name is required.";
+            } elseif ($user->updateProfile($userId, $updateData)) {
+                $success = "Profile updated successfully!";
+                $userData = $user->getUserById($userId); // Refresh data
+            } else {
+                $error = "Profile update failed in the database.";
+            }
+        }
+        
+        // If there's an error, log it
+        if (!empty($error)) {
+            error_log("Profile update error for user $userId: $error");
+        }
+    }
+    /*if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = '../../assets/images/avatars/';
         
         // AUTO-FIX: Create the folder if it's missing
@@ -56,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         $error = "Error: updateTailorProfile method is missing in User.php class.";
-    }
+    }*/
 }
 ?>
 <!DOCTYPE html>
