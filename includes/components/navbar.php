@@ -4,6 +4,8 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Get the user type from the session if it exists
+$userType = $_SESSION['user_type'] ?? null;
 
 // FIX: Define a stable SITE_URL that doesn't change based on the current folder
 if (!defined('SITE_URL')) {
