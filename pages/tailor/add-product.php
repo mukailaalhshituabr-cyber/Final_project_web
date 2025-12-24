@@ -172,62 +172,170 @@ $categories = $db->getCategories();
             padding-bottom: 0.75rem;
             border-bottom: 2px solid #667eea;
         }
-        .image-upload-area {
-            border: 2px dashed #dee2e6;
+        .image-upload-container {
             border-radius: 10px;
-            padding: 2rem;
+            overflow: hidden;
+        }
+        .image-upload-area {
+            border: 3px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 3rem 2rem;
             text-align: center;
             transition: all 0.3s ease;
             cursor: pointer;
-        }
-        .image-upload-area:hover {
-            border-color: #667eea;
             background: #f8f9fa;
+            position: relative;
+        }
+        .image-upload-area.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        .image-upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        .image-upload-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        .image-upload-subtext {
+            color: #6c757d;
+            font-size: 0.9rem;
         }
         .image-preview {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             object-fit: cover;
             border-radius: 8px;
-            margin: 0.5rem;
+            border: 2px solid #dee2e6;
         }
         .image-preview-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            min-height: 120px;
+        }
+        .image-preview-wrapper {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .image-preview-wrapper:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .image-preview-wrapper:hover .image-preview {
+            border-color: #667eea;
+        }
+        .remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #dc3545;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .image-preview-wrapper:hover .remove-image {
+            opacity: 1;
+        }
+        .remove-image:hover {
+            background: #c82333;
+        }
+        .image-counter {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
         }
         .customization-option {
             background: #f8f9fa;
             border-radius: 8px;
-            padding: 1rem;
+            padding: 1.5rem;
             margin-bottom: 1rem;
             border-left: 4px solid #667eea;
         }
         .btn-add-option {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
             transition: all 0.3s ease;
         }
         .btn-add-option:hover {
-            background: #5a67d8;
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
             transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
         .specification-row {
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .specification-row:hover {
+            background: #e9ecef;
         }
         .btn-save {
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            padding: 0.75rem 2rem;
+            padding: 0.75rem 2.5rem;
             font-weight: 600;
+            border-radius: 8px;
         }
         .btn-save:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-browse {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+        .btn-browse:hover {
+            background: #667eea;
+            color: white;
+        }
+        .upload-progress {
+            display: none;
+            margin-top: 1rem;
+        }
+        .upload-progress.active {
+            display: block;
+        }
+        .progress-bar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        .file-info {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -238,6 +346,7 @@ $categories = $db->getCategories();
         <div class="row">
             <div class="col-12">
                 <h1 class="h3 fw-bold mb-4">Add New Product</h1>
+                <p class="text-muted">Fill in the details below to add your new product to the marketplace</p>
             </div>
         </div>
 
@@ -258,7 +367,7 @@ $categories = $db->getCategories();
         <form method="POST" action="" enctype="multipart/form-data" id="productForm">
             <!-- Basic Information -->
             <div class="form-section">
-                <h3 class="section-title">Basic Information</h3>
+                <h3 class="section-title"><i class="bi bi-info-circle me-2"></i>Basic Information</h3>
                 <div class="row">
                     <div class="col-md-8 mb-3">
                         <label class="form-label">Product Title *</label>
@@ -339,28 +448,37 @@ $categories = $db->getCategories();
 
             <!-- Pricing -->
             <div class="form-section">
-                <h3 class="section-title">Pricing</h3>
+                <h3 class="section-title"><i class="bi bi-tag me-2"></i>Pricing</h3>
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Price (CFA) *</label>
-                        <input type="number" class="form-control" name="price" 
-                               step="0.01" min="0" required>
+                        <div class="input-group">
+                            <span class="input-group-text">CFA</span>
+                            <input type="number" class="form-control" name="price" 
+                                   step="0.01" min="0" required placeholder="0.00">
+                        </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Compare Price (CFA)</label>
-                        <input type="number" class="form-control" name="compare_price" 
-                               step="0.01" min="0">
+                        <div class="input-group">
+                            <span class="input-group-text">CFA</span>
+                            <input type="number" class="form-control" name="compare_price" 
+                                   step="0.01" min="0" placeholder="Original price">
+                        </div>
                         <small class="text-muted">Original price to show discount</small>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Cost Price (CFA)</label>
-                        <input type="number" class="form-control" name="cost_price" 
-                               step="0.01" min="0">
+                        <div class="input-group">
+                            <span class="input-group-text">CFA</span>
+                            <input type="number" class="form-control" name="cost_price" 
+                                   step="0.01" min="0" placeholder="Your cost">
+                        </div>
                         <small class="text-muted">Your cost for this product</small>
                     </div>
                 </div>
                 
-                <div class="form-check mb-3">
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Brand</label>
                         <input type="text" class="form-control" name="brand" 
@@ -368,22 +486,25 @@ $categories = $db->getCategories();
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Weight (kg)</label>
-                        <input type="number" class="form-control" name="weight" 
-                               step="0.01" min="0" placeholder="e.g., 0.5">
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="weight" 
+                                   step="0.01" min="0" placeholder="0.5">
+                            <span class="input-group-text">kg</span>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Dimensions (L*W*H)</label>
+                        <label class="form-label">Dimensions (L×W×H)</label>
                         <input type="text" class="form-control" name="dimensions" 
-                               placeholder="e.g., 30*20*5 cm">
+                               placeholder="e.g., 30×20×5 cm">
                     </div>
                     <div class="col-md-6 mb-3">
                         <div class="form-check mt-4">
                             <input class="form-check-input" type="checkbox" name="featured" value="1" id="featured">
-                            <label class="form-check-label" for="featured">
-                                Feature this product
+                            <label class="form-check-label fw-medium" for="featured">
+                                <i class="bi bi-star-fill text-warning me-2"></i>Feature this product
                             </label>
                             <small class="text-muted d-block">Featured products appear on homepage</small>
                         </div>
@@ -393,7 +514,7 @@ $categories = $db->getCategories();
 
             <!-- Inventory -->
             <div class="form-section">
-                <h3 class="section-title">Inventory</h3>
+                <h3 class="section-title"><i class="bi bi-box-seam me-2"></i>Inventory</h3>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Stock Quantity</label>
@@ -412,10 +533,10 @@ $categories = $db->getCategories();
 
             <!-- Customization -->
             <div class="form-section">
-                <h3 class="section-title">Customization Options</h3>
+                <h3 class="section-title"><i class="bi bi-sliders me-2"></i>Customization Options</h3>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" name="is_customizable" value="1" id="is_customizable">
-                    <label class="form-check-label" for="is_customizable">
+                    <label class="form-check-label fw-medium" for="is_customizable">
                         Allow customization for this product
                     </label>
                     <small class="text-muted d-block">Customers can request custom changes</small>
@@ -433,7 +554,7 @@ $categories = $db->getCategories();
 
             <!-- Specifications -->
             <div class="form-section">
-                <h3 class="section-title">Specifications</h3>
+                <h3 class="section-title"><i class="bi bi-list-check me-2"></i>Specifications</h3>
                 <div id="specifications-container">
                     <div class="specification-row row">
                         <div class="col-md-5 mb-2">
@@ -458,23 +579,43 @@ $categories = $db->getCategories();
 
             <!-- Images -->
             <div class="form-section">
-                <h3 class="section-title">Product Images</h3>
-                <div class="image-upload-area" id="image-upload-area">
-                    <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: #667eea;"></i>
-                    <p class="mt-3">Drag & drop product images here or click to browse</p>
-                    <p class="text-muted small">Upload up to 8 images (Max 5MB each)</p>
-                    <input type="file" name="images[]" id="image-input" multiple accept="image/*" 
-                           style="display: none;" onchange="handleImageUpload(event)">
-                </div>
-                
-                <div id="image-preview-container" class="image-preview-container">
-                    <!-- Image previews will appear here -->
+                <h3 class="section-title"><i class="bi bi-images me-2"></i>Product Images</h3>
+                <div class="image-upload-container">
+                    <div class="image-upload-area" id="image-upload-area">
+                        <div class="image-upload-icon">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                        </div>
+                        <div class="image-upload-text">Drag & drop your product images here</div>
+                        <div class="image-upload-subtext mb-3">or</div>
+                        <button type="button" class="btn btn-browse" id="browse-images-btn">
+                            <i class="bi bi-folder2-open me-2"></i>Browse Files
+                        </button>
+                        <p class="text-muted small mt-3 mb-0">Supported: JPG, PNG, GIF, WebP | Max 5MB per image</p>
+                        <p class="text-muted small">Upload up to 8 images</p>
+                        
+                        <input type="file" name="images[]" id="image-input" multiple accept="image/*" 
+                               style="display: none;">
+                    </div>
+                    
+                    <!-- Upload Progress -->
+                    <div class="upload-progress" id="upload-progress">
+                        <div class="progress mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="file-info" id="file-info"></div>
+                    </div>
+                    
+                    <!-- Image Previews -->
+                    <div id="image-preview-container" class="image-preview-container">
+                        <!-- Image previews will appear here -->
+                    </div>
                 </div>
             </div>
 
             <!-- Status & Save -->
             <div class="form-section">
-                <h3 class="section-title">Publish</h3>
+                <h3 class="section-title"><i class="bi bi-send-check me-2"></i>Publish</h3>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Status</label>
@@ -630,29 +771,158 @@ $categories = $db->getCategories();
             const imageInput = document.getElementById('image-input');
             const imageUploadArea = document.getElementById('image-upload-area');
             const imagePreviewContainer = document.getElementById('image-preview-container');
+            const browseButton = document.getElementById('browse-images-btn');
+            const uploadProgress = document.getElementById('upload-progress');
+            const progressBar = uploadProgress.querySelector('.progress-bar');
+            const fileInfo = document.getElementById('file-info');
             
-            imageUploadArea.addEventListener('click', () => imageInput.click());
+            // Browse button click
+            browseButton.addEventListener('click', () => imageInput.click());
             
-            imageUploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                imageUploadArea.style.borderColor = '#667eea';
-                imageUploadArea.style.background = '#f8f9fa';
+            // Drag and drop functionality
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                imageUploadArea.addEventListener(eventName, preventDefaults, false);
             });
             
-            imageUploadArea.addEventListener('dragleave', () => {
-                imageUploadArea.style.borderColor = '#dee2e6';
-                imageUploadArea.style.background = 'white';
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                imageUploadArea.addEventListener(eventName, highlight, false);
             });
             
-            imageUploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                imageUploadArea.style.borderColor = '#dee2e6';
-                imageUploadArea.style.background = 'white';
+            ['dragleave', 'drop'].forEach(eventName => {
+                imageUploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                imageUploadArea.classList.add('drag-over');
+            }
+            
+            function unhighlight() {
+                imageUploadArea.classList.remove('drag-over');
+            }
+            
+            // Handle drop
+            imageUploadArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+            
+            // Handle file input change
+            imageInput.addEventListener('change', function(e) {
+                handleFiles(this.files);
+            });
+            
+            let uploadedImages = [];
+            
+            function handleFiles(files) {
+                const maxFiles = 8;
+                const maxSize = 5 * 1024 * 1024; // 5MB
                 
-                if (e.dataTransfer.files.length) {
-                    handleImageUpload({ target: { files: e.dataTransfer.files } });
+                // Check if adding these files would exceed limit
+                if (uploadedImages.length + files.length > maxFiles) {
+                    alert(`You can only upload up to ${maxFiles} images. You currently have ${uploadedImages.length} images.`);
+                    return;
                 }
-            });
+                
+                // Process each file
+                let processedFiles = 0;
+                const totalFiles = Math.min(files.length, maxFiles - uploadedImages.length);
+                
+                if (totalFiles === 0) return;
+                
+                // Show upload progress
+                uploadProgress.classList.add('active');
+                progressBar.style.width = '0%';
+                fileInfo.textContent = `Processing 0 of ${totalFiles} files...`;
+                
+                for (let i = 0; i < totalFiles; i++) {
+                    const file = files[i];
+                    
+                    // Check file size
+                    if (file.size > maxSize) {
+                        alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+                        continue;
+                    }
+                    
+                    // Check file type
+                    if (!file.type.match('image.*')) {
+                        alert(`File ${file.name} is not an image.`);
+                        continue;
+                    }
+                    
+                    // Update progress
+                    processedFiles++;
+                    progressBar.style.width = `${(processedFiles / totalFiles) * 100}%`;
+                    fileInfo.textContent = `Processing ${processedFiles} of ${totalFiles} files...`;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imageId = Date.now() + Math.random();
+                        uploadedImages.push({
+                            id: imageId,
+                            file: file,
+                            preview: e.target.result
+                        });
+                        
+                        const preview = document.createElement('div');
+                        preview.className = 'image-preview-wrapper';
+                        preview.dataset.id = imageId;
+                        preview.innerHTML = `
+                            <img src="${e.target.result}" class="image-preview" alt="Preview">
+                            <button type="button" class="remove-image">
+                                <i class="bi bi-x"></i>
+                            </button>
+                            <div class="image-counter">${uploadedImages.length}</div>
+                        `;
+                        imagePreviewContainer.appendChild(preview);
+                        
+                        // Add remove functionality
+                        preview.querySelector('.remove-image').addEventListener('click', function() {
+                            const id = preview.dataset.id;
+                            uploadedImages = uploadedImages.filter(img => img.id != id);
+                            preview.remove();
+                            
+                            // Update counters
+                            updateImageCounters();
+                        });
+                        
+                        // Update progress when all files are processed
+                        if (processedFiles === totalFiles) {
+                            setTimeout(() => {
+                                progressBar.style.width = '100%';
+                                fileInfo.textContent = `${totalFiles} files uploaded successfully!`;
+                                setTimeout(() => {
+                                    uploadProgress.classList.remove('active');
+                                }, 1000);
+                            }, 500);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+                
+                // Create a new DataTransfer object and add files
+                const dataTransfer = new DataTransfer();
+                uploadedImages.forEach(img => {
+                    dataTransfer.items.add(img.file);
+                });
+                
+                // Update the file input
+                imageInput.files = dataTransfer.files;
+            }
+            
+            function updateImageCounters() {
+                const previews = imagePreviewContainer.querySelectorAll('.image-preview-wrapper');
+                previews.forEach((preview, index) => {
+                    preview.querySelector('.image-counter').textContent = index + 1;
+                });
+            }
             
             // Form validation
             document.getElementById('productForm').addEventListener('submit', function(e) {
@@ -675,61 +945,19 @@ $categories = $db->getCategories();
                     }
                 }
                 
+                // Check if at least one image is uploaded
+                if (uploadedImages.length === 0) {
+                    e.preventDefault();
+                    if (confirm('No images uploaded. Products without images may get less attention. Continue anyway?')) {
+                        return true;
+                    }
+                    return false;
+                }
+                
                 return true;
             });
         });
-        
-        function handleImageUpload(event) {
-            const files = event.target.files;
-            const previewContainer = document.getElementById('image-preview-container');
-            const maxFiles = 8;
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            
-            // Clear existing previews if needed
-            previewContainer.innerHTML = '';
-            
-            // Check file count
-            if (files.length > maxFiles) {
-                alert(`You can only upload up to ${maxFiles} images`);
-                return;
-            }
-            
-            // Process each file
-            for (let i = 0; i < Math.min(files.length, maxFiles); i++) {
-                const file = files[i];
-                
-                // Check file size
-                if (file.size > maxSize) {
-                    alert(`File ${file.name} is too large. Maximum size is 5MB.`);
-                    continue;
-                }
-                
-                // Check file type
-                if (!file.type.match('image.*')) {
-                    alert(`File ${file.name} is not an image.`);
-                    continue;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.createElement('div');
-                    preview.className = 'image-preview-wrapper position-relative';
-                    preview.innerHTML = `
-                        <img src="${e.target.result}" class="image-preview" alt="Preview">
-                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 remove-image">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    `;
-                    previewContainer.appendChild(preview);
-                    
-                    // Add remove functionality
-                    preview.querySelector('.remove-image').addEventListener('click', function() {
-                        preview.remove();
-                    });
-                };
-                reader.readAsDataURL(file);
-            }
-        }
     </script>
 </body>
 </html>
+
