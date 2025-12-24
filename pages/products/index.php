@@ -111,11 +111,11 @@ $clothingImages = [
         'https://th.bing.com/th/id/OIP.QwWWJ0_m081_h0EfnKtnRwHaLy?w=119&h=189&c=7&r=0&o=7&dpr=2.6&pid=1.7&rm=3'
     ],
     'modern' => [
-        'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=400&h=500&fit=crop'
+        'https://guardian.ng/saturday-magazine/put-your-best-fashion-foot-forward-this-eid/',
+        'https://www.shutterstock.com/search/african-muslim-wear?page=2',
+        'https://www.centromedicoloira.com/?s=4824701001430',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSt43JRLaxscPrISLPxyiLXQyMNSSC2sa7Eg&s',
+        'https://www.cartrollers.com/product/quality-islamic-fashion-jalabiya/'
     ],
     'formal'=> [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNA-BrhdLtyPMog2YDzb0q7dw2WYSNM9-gEA&s',
