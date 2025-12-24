@@ -108,43 +108,43 @@ dropdown
                 
                 <!-- User Menu -->
                 <?php if ($isLoggedIn): ?>
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle me-2"></i>
-                        <span class="d-none d-md-inline"><?php echo htmlspecialchars($userName); ?></span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        
-                        <?php if ($userType == 'customer'): ?>
-                            <li><h6 class="dropdown-header"><i class="bi bi-person me-2"></i>Customer</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/profile.php"><i class="bi bi-person me-2"></i> My Profile</a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/orders.php"><i class="bi bi-bag me-2"></i> My Orders</a></li>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span class="d-none d-md-inline"><?php echo htmlspecialchars($userName); ?></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            
+                            <?php if ($userType == 'customer'): ?>
+                                <li><h6 class="dropdown-header"><i class="bi bi-person me-2"></i>Customer</h6></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/profile.php"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/orders.php"><i class="bi bi-bag me-2"></i> My Orders</a></li>
 
-                        <?php elseif ($userType == 'tailor'): ?>
-                            <li><h6 class="dropdown-header"><i class="bi bi-scissors me-2"></i>Tailor Panel</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/index.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/products.php"><i class="bi bi-grid me-2"></i> My Products</a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/orders.php"><i class="bi bi-bag-check me-2"></i> Orders</a></li>
+                            <?php elseif ($userType == 'tailor'): ?>
+                                <li><h6 class="dropdown-header"><i class="bi bi-scissors me-2"></i>Tailor Panel</h6></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/products.php"><i class="bi bi-grid me-2"></i> My Products</a></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/tailor/orders.php"><i class="bi bi-bag-check me-2"></i> Orders</a></li>
 
-                        <?php elseif ($userType == 'admin'): ?>
-                            <li><h6 class="dropdown-header"><i class="bi bi-shield-check me-2"></i>Admin</h6></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/admin/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/admin/users.php"><i class="bi bi-people me-2"></i> Users</a></li>
-                        <?php endif; ?>
+                            <?php elseif ($userType == 'admin'): ?>
+                                <li><h6 class="dropdown-header"><i class="bi bi-shield-check me-2"></i>Admin</h6></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/admin/dashboard.php"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                                <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/admin/users.php"><i class="bi bi-people me-2"></i> Users</a></li>
+                            <?php endif; ?>
 
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/messages.php"><i class="bi bi-chat-dots me-2"></i> Messages</a></li>
-                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/settings.php"><i class="bi bi-gear me-2"></i> Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        
-                        <li>
-                            <a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
-                                <i class="bi bi-box-arrow-right me-2"></i> Logout
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/customer/messages.php"><i class="bi bi-chat-dots me-2"></i> Messages</a></li>
+                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/settings.php"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <li>
+                                <a class="dropdown-item text-danger" href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 <?php else: ?>
                 <div class="d-flex gap-2">
                     <a href="<?php echo SITE_URL; ?>/pages/auth/login.php" class="btn btn-outline-primary">
