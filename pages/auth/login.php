@@ -1,5 +1,5 @@
 <?php
-require_once '../../config.php';
+require_once 'config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
 
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($userData) {
             // Verify user_type is valid
-            if (!in_array($userData['user_type'], ['customer', 'tailor', 'admin'])) {
+            if (!in_array($userData['user_type'], ['customer', 't', 'admin'])) {
                 $error = 'Invalid account type';
             } else {
                 // Set session variables
@@ -56,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         case 'customer':
                             $redirectPath = '../../pages/customer/dashboard.php';
                             break;
-                        case 'tailor':
-                            $redirectPath = '../../pages/tailor/dashboard.php';
+                        case 't':
+                            $redirectPath = '../../pages/t/dashboard.php';
                             break;
                         case 'admin':
                             $redirectPath = '../../pages/admin/dashboard.php';
@@ -206,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <ul class="feature-list list-unstyled">
                                     <li><i class="bi bi-check-circle-fill"></i>Track your orders</li>
                                     <li><i class="bi bi-check-circle-fill"></i>Manage your profile</li>
-                                    <li><i class="bi bi-check-circle-fill"></i>Connect with tailors</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Connect with ts</li>
                                     <li><i class="bi bi-check-circle-fill"></i>Get recommendations</li>
                                 </ul>
                                 
@@ -249,8 +249,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <button type="button" class="btn user-type-btn active" data-type="customer">
                                             <i class="bi bi-person me-2"></i>Customer
                                         </button>
-                                        <button type="button" class="btn user-type-btn" data-type="tailor">
-                                            <i class="bi bi-scissors me-2"></i>Tailor
+                                        <button type="button" class="btn user-type-btn" data-type="t">
+                                            <i class="bi bi-scissors me-2"></i>t
                                         </button>
                                         <button type="button" class="btn user-type-btn" data-type="admin">
                                             <i class="bi bi-shield-check me-2"></i>Admin
@@ -258,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 </div>
                                 
-                                <!-- Customer/Tailor Login Form -->
+                                <!-- Customer/t Login Form -->
                                 <form method="POST" action="" id="regularLoginForm">
                                     <input type="hidden" name="user_type" id="loginUserType" value="customer">
                                     
@@ -372,8 +372,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         adminForm.style.display = 'none';
                         // Update form text based on user type
                         const submitBtn = regularForm.querySelector('button[type="submit"]');
-                        if (type === 'tailor') {
-                            submitBtn.innerHTML = '<i class="bi bi-scissors me-2"></i> Tailor Login';
+                        if (type === 't') {
+                            submitBtn.innerHTML = '<i class="bi bi-scissors me-2"></i> t Login';
                         } else {
                             submitBtn.innerHTML = '<i class="bi bi-person me-2"></i> Customer Login';
                         }
@@ -595,7 +595,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </li>
                                     <li>
                                         <i class="bi bi-check-circle-fill"></i>
-                                        <span>Connect with talented tailors</span>
+                                        <span>Connect with talented ts</span>
                                     </li>
                                     <li>
                                         <i class="bi bi-check-circle-fill"></i>
@@ -751,8 +751,8 @@ if (isset($_SESSION['user_id'])) {
             case 'admin':
                 header('Location: ' . SITE_URL . '/pages/admin/dashboard.php');
                 break;
-            case 'tailor':
-                header('Location: ' . SITE_URL . '/pages/tailor/dashboard.php');
+            case 't':
+                header('Location: ' . SITE_URL . '/pages/t/dashboard.php');
                 break;
             default:
                 header('Location: ' . SITE_URL . '/index.php');
@@ -815,8 +815,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'admin':
                     header('Location: ' . SITE_URL . '/pages/admin/dashboard.php');
                     break;
-                case 'tailor':
-                    header('Location: ' . SITE_URL . '/pages/tailor/dashboard.php');
+                case 't':
+                    header('Location: ' . SITE_URL . '/pages/t/dashboard.php');
                     break;
                 default:
                     header('Location: ' . SITE_URL . '/index.php');
@@ -1376,7 +1376,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <div class="feature-icon">
                             <i class="bi bi-globe"></i>
                         </div>
-                        <span>Global marketplace connecting tailors and customers</span>
+                        <span>Global marketplace connecting ts and customers</span>
                     </li>
                     <li class="feature-item">
                         <div class="feature-icon">
@@ -1388,7 +1388,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <div class="feature-icon">
                             <i class="bi bi-chat-dots"></i>
                         </div>
-                        <span>Direct communication with talented tailors</span>
+                        <span>Direct communication with talented ts</span>
                     </li>
                     <li class="feature-item">
                         <div class="feature-icon">
@@ -1689,7 +1689,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Demo login credentials (remove in production)
             const demoCredentials = {
                 'admin@marketplace.com': 'admin123',
-                'tailor@example.com': 'tailor123',
+                't@example.com': 't123',
                 'customer@example.com': 'customer123'
             };
             
@@ -1700,8 +1700,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     passwordInput.value = 'admin123';
                 }
                 if (e.ctrlKey && e.key === '2') {
-                    emailInput.value = 'tailor@example.com';
-                    passwordInput.value = 'tailor123';
+                    emailInput.value = 't@example.com';
+                    passwordInput.value = 't123';
                 }
                 if (e.ctrlKey && e.key === '3') {
                     emailInput.value = 'customer@example.com';

@@ -5,7 +5,7 @@
  */
 
 // 1. Load configuration and functions
-require_once '../../config.php';
+require_once 'config.php';
 
 // Check if file exists before requiring to prevent further fatal errors
 $auth_path = '../../includes/functions/auth_functions.php';
