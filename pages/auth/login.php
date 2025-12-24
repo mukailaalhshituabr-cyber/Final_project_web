@@ -1,30 +1,28 @@
 <?php
-require_once 'config.php';
+require_once '../../config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
 
-// Force session start at the VERY BEGINNING
+// 1. Initialize Session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if already logged in
-if (isset($_SESSION['user_id'])) {
-    $dashboardPath = '../../pages/' . $_SESSION['user_type'] . '/dashboard.php';
-    if (file_exists($dashboardPath)) {
-        header('Location: ' . $dashboardPath);
-        exit();
-    }
+// 2. Check if already logged in - Redirect to their specific dashboard
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_type'])) {
+    header('Location: ../../pages/' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
 }
 
 $error = '';
 $success = isset($_GET['success']) ? 'Registration successful! Please login.' : '';
 
-// Handle form submission
+// 3. Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    
+    $selectedType = $_POST['user_type'] ?? ''; // From the hidden input in your form
+
     if (empty($email) || empty($password)) {
         $error = 'Please fill in all fields';
     } else {
@@ -32,44 +30,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userData = $user->login($email, $password);
         
         if ($userData) {
-            // Verify user_type is valid
-            if (!in_array($userData['user_type'], ['customer', 't', 'admin'])) {
-                $error = 'Invalid account type';
+            // Validate that the account type matches what the user selected on the UI
+            // This prevents a customer from logging in through the Admin toggle
+            if ($userData['user_type'] !== $selectedType) {
+                $error = "This account is not registered as a " . htmlspecialchars($selectedType);
             } else {
-                // Set session variables
+                // SUCCESS: Secure the session
+                session_regenerate_id(true); 
+                
                 $_SESSION['user_id'] = $userData['id'];
                 $_SESSION['user_type'] = $userData['user_type'];
                 $_SESSION['full_name'] = $userData['full_name'];
                 $_SESSION['email'] = $userData['email'];
                 $_SESSION['username'] = $userData['username'];
-                
-                // Store user type in session for debugging
-                $_SESSION['debug_user_type'] = $userData['user_type'];
-                
-                // Redirect based on user type
-                $redirectPath = '../../pages/' . $userData['user_type'] . '/dashboard.php';
-                
-                // Debug: Check if file exists
-                if (!file_exists($redirectPath)) {
-                    // Create dashboard if it doesn't exist
-                    switch ($userData['user_type']) {
-                        case 'customer':
-                            $redirectPath = '../../pages/customer/dashboard.php';
-                            break;
-                        case 't':
-                            $redirectPath = '../../pages/t/dashboard.php';
-                            break;
-                        case 'admin':
-                            $redirectPath = '../../pages/admin/dashboard.php';
-                            break;
-                    }
-                }
-                
-                // Debug output
-                error_log("Login successful - User: {$userData['id']}, Type: {$userData['user_type']}, Redirect: $redirectPath");
-                
-                // Immediate redirect
-                header('Location: ' . $redirectPath);
+
+                // Log for security auditing
+                error_log("Login successful - User ID: {$userData['id']} as {$userData['user_type']}");
+
+                // Redirect based on the DB type
+                header('Location: ../../pages/' . $userData['user_type'] . '/dashboard.php');
                 exit();
             }
         } else {
@@ -94,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
             padding: 20px;
         }
-        
         .login-card {
             background: white;
             border-radius: 20px;
@@ -103,7 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             max-width: 900px;
             margin: 0 auto;
         }
-        
         .login-left {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
             padding: 3rem;
@@ -111,81 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flex-direction: column;
             justify-content: center;
         }
-        
         .login-logo {
             font-size: 2.5rem;
             font-weight: 700;
             color: #667eea;
             margin-bottom: 2rem;
         }
-        
-        .feature-list li {
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        .feature-list i {
-            color: #667eea;
-            margin-right: 10px;
-            font-size: 1.2rem;
-        }
-        
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 0.75rem 2rem;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .alert {
-            border-radius: 10px;
-            border: none;
-        }
-        
-        .user-type-selector {
-            margin-bottom: 1.5rem;
-        }
-        
-        .user-type-btn {
-            flex: 1;
-            padding: 0.75rem;
-            border: 2px solid #dee2e6;
-            background: white;
-            color: #6c757d;
-            transition: all 0.3s ease;
-        }
-        
-        .user-type-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-        }
-        
-        .user-type-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        #adminLoginForm {
-            display: none;
-        }
-        
-        @media (max-width: 768px) {
-            .login-left {
-                display: none;
-            }
-        }
+        .feature-list li { margin-bottom: 1rem; display: flex; align-items: center; }
+        .feature-list i { color: #667eea; margin-right: 10px; font-size: 1.2rem; }
+        .user-type-btn { flex: 1; padding: 0.75rem; border: 2px solid #dee2e6; background: white; color: #6c757d; transition: all 0.3s ease; }
+        .user-type-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        #adminLoginForm { display: none; }
+        @media (max-width: 768px) { .login-left { display: none; } }
     </style>
 </head>
 <body>
@@ -194,147 +108,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-lg-10">
                 <div class="login-card">
                     <div class="row g-0">
-                        <!-- Left Side -->
                         <div class="col-lg-6 d-none d-lg-block">
-                            <div class="login-left">
+                            <div class="login-left h-100">
                                 <div class="login-logo">
                                     <i class="bi bi-shop me-2"></i><?php echo htmlspecialchars(SITE_NAME); ?>
                                 </div>
                                 <h2 class="fw-bold mb-4">Welcome Back!</h2>
-                                <p class="text-muted mb-4">Sign in to access your personalized dashboard.</p>
-                                
                                 <ul class="feature-list list-unstyled">
                                     <li><i class="bi bi-check-circle-fill"></i>Track your orders</li>
                                     <li><i class="bi bi-check-circle-fill"></i>Manage your profile</li>
-                                    <li><i class="bi bi-check-circle-fill"></i>Connect with ts</li>
-                                    <li><i class="bi bi-check-circle-fill"></i>Get recommendations</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Secure Access</li>
                                 </ul>
-                                
                                 <div class="mt-5">
-                                    <p class="text-muted mb-2">New to <?php echo htmlspecialchars(SITE_NAME); ?>?</p>
-                                    <a href="register.php" class="btn btn-outline-primary">
-                                        Create Account <i class="bi bi-arrow-right ms-2"></i>
-                                    </a>
+                                    <p class="text-muted mb-2">New here?</p>
+                                    <a href="register.php" class="btn btn-outline-primary">Create Account</a>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Right Side -->
                         <div class="col-lg-6">
                             <div class="p-4 p-md-5">
                                 <div class="text-center mb-4">
                                     <h2 class="fw-bold mb-2">Sign In</h2>
-                                    <p class="text-muted">Enter your credentials to continue</p>
+                                    <p class="text-muted">Enter your credentials</p>
                                 </div>
-                                
-                                <?php if (!empty($success)): ?>
-                                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                    <i class="bi bi-check-circle me-2"></i>
-                                    <?php echo htmlspecialchars($success); ?>
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
+
+                                <?php if ($success): ?>
+                                    <div class="alert alert-success alert-dismissible fade show"><?php echo $success; ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
                                 <?php endif; ?>
-                                
-                                <?php if (!empty($error)): ?>
-                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <?php echo htmlspecialchars($error); ?>
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
+                                <?php if ($error): ?>
+                                    <div class="alert alert-danger alert-dismissible fade show"><?php echo $error; ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
                                 <?php endif; ?>
-                                
-                                <!-- User Type Selector -->
-                                <div class="user-type-selector">
-                                    <div class="d-flex gap-2 mb-3">
-                                        <button type="button" class="btn user-type-btn active" data-type="customer">
-                                            <i class="bi bi-person me-2"></i>Customer
-                                        </button>
-                                        <button type="button" class="btn user-type-btn" data-type="t">
-                                            <i class="bi bi-scissors me-2"></i>t
-                                        </button>
-                                        <button type="button" class="btn user-type-btn" data-type="admin">
-                                            <i class="bi bi-shield-check me-2"></i>Admin
-                                        </button>
-                                    </div>
+
+                                <div class="user-type-selector d-flex gap-2 mb-4">
+                                    <button type="button" class="btn user-type-btn active" data-type="customer"><i class="bi bi-person me-1"></i>Customer</button>
+                                    <button type="button" class="btn user-type-btn" data-type="t"><i class="bi bi-scissors me-1"></i>T</button>
+                                    <button type="button" class="btn user-type-btn" data-type="admin"><i class="bi bi-shield-lock me-1"></i>Admin</button>
                                 </div>
-                                
-                                <!-- Customer/t Login Form -->
-                                <form method="POST" action="" id="regularLoginForm">
+
+                                <form method="POST" action="" id="loginForm">
                                     <input type="hidden" name="user_type" id="loginUserType" value="customer">
                                     
+                                    <div id="adminWarning" class="alert alert-warning d-none">
+                                        <i class="bi bi-shield-exclamation me-2"></i>Admin login requires special credentials
+                                    </div>
+
                                     <div class="mb-3">
-                                        <label class="form-label">Email Address</label>
+                                        <label class="form-label" id="emailLabel">Email Address</label>
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                                            <input type="email" class="form-control" name="email" 
-                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
-                                                   placeholder="your@email.com" required>
+                                            <input type="email" class="form-control" name="email" required 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                                         </div>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label class="form-label">Password</label>
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                            <input type="password" class="form-control" name="password" 
-                                                   id="passwordField" placeholder="Enter your password" required>
+                                            <input type="password" class="form-control" name="password" id="passwordField" required>
                                             <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                                 <i class="bi bi-eye"></i>
                                             </button>
                                         </div>
                                     </div>
-                                    
-                                    <div class="mb-3 form-check">
-                                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                                        <label class="form-check-label" for="remember">Remember me</label>
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+
+                                    <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 mb-3">
+                                        Sign In as Customer
                                     </button>
-                                    
-                                    <div class="text-center mb-3">
-                                        <a href="forgot-password.php" class="text-decoration-none">
-                                            Forgot Password?
-                                        </a>
+
+                                    <div class="text-center">
+                                        <a href="forgot-password.php" class="text-decoration-none small">Forgot Password?</a>
                                     </div>
                                 </form>
-                                
-                                <!-- Admin Login Form -->
-                                <form method="POST" action="" id="adminLoginForm">
-                                    <input type="hidden" name="user_type" value="admin">
-                                    <div class="alert alert-warning">
-                                        <i class="bi bi-shield-exclamation me-2"></i>
-                                        Admin login requires special credentials
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Admin Email</label>
-                                        <input type="email" class="form-control" name="email" 
-                                               placeholder="admin@<?php echo strtolower(SITE_NAME); ?>.com" required>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Admin Password</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" name="password" 
-                                                   placeholder="Admin password" required>
-                                            <button class="btn btn-outline-secondary" type="button" id="toggleAdminPassword">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-danger w-100 py-2">
-                                        <i class="bi bi-shield-check me-2"></i> Admin Login
-                                    </button>
-                                </form>
-                                
-                                <div class="text-center mt-4">
-                                    <p class="text-muted mb-0">Don't have an account? 
-                                        <a href="register.php" class="text-decoration-none fw-bold">Sign Up</a>
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -342,91 +188,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // User type switching
             const userTypeBtns = document.querySelectorAll('.user-type-btn');
-            const regularForm = document.getElementById('regularLoginForm');
-            const adminForm = document.getElementById('adminLoginForm');
             const loginUserType = document.getElementById('loginUserType');
-            
+            const submitBtn = document.getElementById('submitBtn');
+            const adminWarning = document.getElementById('adminWarning');
+            const emailLabel = document.getElementById('emailLabel');
+
+            // 1. Handle User Type Switching
             userTypeBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     const type = this.dataset.type;
                     
-                    // Update active button
+                    // UI Updates
                     userTypeBtns.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Update hidden field
+                    // Logic Updates
                     loginUserType.value = type;
                     
-                    // Show appropriate form
+                    // Change Button Styles & Text
                     if (type === 'admin') {
-                        regularForm.style.display = 'none';
-                        adminForm.style.display = 'block';
+                        submitBtn.className = "btn btn-danger w-100 py-2 mb-3";
+                        submitBtn.innerText = "Admin Login";
+                        adminWarning.classList.remove('d-none');
+                        emailLabel.innerText = "Admin Email";
+                    } else if (type === 't') {
+                        submitBtn.className = "btn btn-dark w-100 py-2 mb-3";
+                        submitBtn.innerText = "Sign In as T";
+                        adminWarning.classList.add('d-none');
+                        emailLabel.innerText = "T Email Address";
                     } else {
-                        regularForm.style.display = 'block';
-                        adminForm.style.display = 'none';
-                        // Update form text based on user type
-                        const submitBtn = regularForm.querySelector('button[type="submit"]');
-                        if (type === 't') {
-                            submitBtn.innerHTML = '<i class="bi bi-scissors me-2"></i> t Login';
-                        } else {
-                            submitBtn.innerHTML = '<i class="bi bi-person me-2"></i> Customer Login';
-                        }
+                        submitBtn.className = "btn btn-primary w-100 py-2 mb-3";
+                        submitBtn.innerText = "Sign In as Customer";
+                        adminWarning.classList.add('d-none');
+                        emailLabel.innerText = "Email Address";
                     }
                 });
             });
+
+            // 2. Toggle Password Visibility
+            const toggleBtn = document.getElementById('togglePassword');
+            const passwordField = document.getElementById('passwordField');
             
-            // Toggle password visibility
-            function setupPasswordToggle(buttonId, fieldId) {
-                const toggleBtn = document.getElementById(buttonId);
-                if (toggleBtn) {
-                    toggleBtn.addEventListener('click', function() {
-                        const field = document.getElementById(fieldId) || 
-                                     document.querySelector('input[name="password"]');
-                        const icon = this.querySelector('i');
-                        
-                        if (field.type === 'password') {
-                            field.type = 'text';
-                            icon.classList.remove('bi-eye');
-                            icon.classList.add('bi-eye-slash');
-                        } else {
-                            field.type = 'password';
-                            icon.classList.remove('bi-eye-slash');
-                            icon.classList.add('bi-eye');
-                        }
-                    });
-                }
-            }
-            
-            setupPasswordToggle('togglePassword', 'passwordField');
-            setupPasswordToggle('toggleAdminPassword', 'adminPasswordField');
-            
-            // Form validation
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const email = this.querySelector('input[name="email"]').value;
-                    const password = this.querySelector('input[name="password"]').value;
-                    
-                    if (!email || !password) {
-                        e.preventDefault();
-                        alert('Please fill in all fields');
-                        return false;
-                    }
-                    
-                    // Additional validation
-                    if (password.length < 6) {
-                        e.preventDefault();
-                        alert('Password must be at least 6 characters');
-                        return false;
-                    }
-                    
-                    return true;
-                });
+            toggleBtn.addEventListener('click', function() {
+                const type = passwordField.type === 'password' ? 'text' : 'password';
+                passwordField.type = type;
+                this.querySelector('i').classList.toggle('bi-eye');
+                this.querySelector('i').classList.toggle('bi-eye-slash');
             });
         });
     </script>
@@ -435,7 +247,198 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <?php
-/*require_once '../../config.php';
+/*
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - <?php echo htmlspecialchars(SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .login-left {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .login-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2rem;
+        }
+        .feature-list li { margin-bottom: 1rem; display: flex; align-items: center; }
+        .feature-list i { color: #667eea; margin-right: 10px; font-size: 1.2rem; }
+        .user-type-btn { flex: 1; padding: 0.75rem; border: 2px solid #dee2e6; background: white; color: #6c757d; transition: all 0.3s ease; }
+        .user-type-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        #adminLoginForm { display: none; }
+        @media (max-width: 768px) { .login-left { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="login-card">
+                    <div class="row g-0">
+                        <div class="col-lg-6 d-none d-lg-block">
+                            <div class="login-left h-100">
+                                <div class="login-logo">
+                                    <i class="bi bi-shop me-2"></i><?php echo htmlspecialchars(SITE_NAME); ?>
+                                </div>
+                                <h2 class="fw-bold mb-4">Welcome Back!</h2>
+                                <ul class="feature-list list-unstyled">
+                                    <li><i class="bi bi-check-circle-fill"></i>Track your orders</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Manage your profile</li>
+                                    <li><i class="bi bi-check-circle-fill"></i>Secure Access</li>
+                                </ul>
+                                <div class="mt-5">
+                                    <p class="text-muted mb-2">New here?</p>
+                                    <a href="register.php" class="btn btn-outline-primary">Create Account</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="p-4 p-md-5">
+                                <div class="text-center mb-4">
+                                    <h2 class="fw-bold mb-2">Sign In</h2>
+                                    <p class="text-muted">Enter your credentials</p>
+                                </div>
+
+                                <?php if ($success): ?>
+                                    <div class="alert alert-success alert-dismissible fade show"><?php echo $success; ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                                <?php endif; ?>
+                                <?php if ($error): ?>
+                                    <div class="alert alert-danger alert-dismissible fade show"><?php echo $error; ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                                <?php endif; ?>
+
+                                <div class="user-type-selector d-flex gap-2 mb-4">
+                                    <button type="button" class="btn user-type-btn active" data-type="customer"><i class="bi bi-person me-1"></i>Customer</button>
+                                    <button type="button" class="btn user-type-btn" data-type="t"><i class="bi bi-scissors me-1"></i>T</button>
+                                    <button type="button" class="btn user-type-btn" data-type="admin"><i class="bi bi-shield-lock me-1"></i>Admin</button>
+                                </div>
+
+                                <form method="POST" action="" id="loginForm">
+                                    <input type="hidden" name="user_type" id="loginUserType" value="customer">
+                                    
+                                    <div id="adminWarning" class="alert alert-warning d-none">
+                                        <i class="bi bi-shield-exclamation me-2"></i>Admin login requires special credentials
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label" id="emailLabel">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                            <input type="email" class="form-control" name="email" required 
+                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                            <input type="password" class="form-control" name="password" id="passwordField" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 mb-3">
+                                        Sign In as Customer
+                                    </button>
+
+                                    <div class="text-center">
+                                        <a href="forgot-password.php" class="text-decoration-none small">Forgot Password?</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userTypeBtns = document.querySelectorAll('.user-type-btn');
+            const loginUserType = document.getElementById('loginUserType');
+            const submitBtn = document.getElementById('submitBtn');
+            const adminWarning = document.getElementById('adminWarning');
+            const emailLabel = document.getElementById('emailLabel');
+
+            // 1. Handle User Type Switching
+            userTypeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    
+                    // UI Updates
+                    userTypeBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Logic Updates
+                    loginUserType.value = type;
+                    
+                    // Change Button Styles & Text
+                    if (type === 'admin') {
+                        submitBtn.className = "btn btn-danger w-100 py-2 mb-3";
+                        submitBtn.innerText = "Admin Login";
+                        adminWarning.classList.remove('d-none');
+                        emailLabel.innerText = "Admin Email";
+                    } else if (type === 't') {
+                        submitBtn.className = "btn btn-dark w-100 py-2 mb-3";
+                        submitBtn.innerText = "Sign In as T";
+                        adminWarning.classList.add('d-none');
+                        emailLabel.innerText = "T Email Address";
+                    } else {
+                        submitBtn.className = "btn btn-primary w-100 py-2 mb-3";
+                        submitBtn.innerText = "Sign In as Customer";
+                        adminWarning.classList.add('d-none');
+                        emailLabel.innerText = "Email Address";
+                    }
+                });
+            });
+
+            // 2. Toggle Password Visibility
+            const toggleBtn = document.getElementById('togglePassword');
+            const passwordField = document.getElementById('passwordField');
+            
+            toggleBtn.addEventListener('click', function() {
+                const type = passwordField.type === 'password' ? 'text' : 'password';
+                passwordField.type = type;
+                this.querySelector('i').classList.toggle('bi-eye');
+                this.querySelector('i').classList.toggle('bi-eye-slash');
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+ssssssss
+require_once '../../config.php';
 require_once '../../includes/classes/User.php';
 
 if (session_status() === PHP_SESSION_NONE) {
