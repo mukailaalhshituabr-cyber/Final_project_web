@@ -299,7 +299,7 @@ $stats = $productObj->getProductStatistics($tailorId);
                                 <label class="form-label">Category</label>
                                 <select class="form-select" name="category">
                                     <option value="">All Categories</option>
-                                    <option value="traditional-wear" <?php echo $category == 'traditional-wear' ? 'selected' : ''; ?>>Traditional Wear</option>
+                                    <option value="-wear" <?php echo $category == '-wear' ? 'selected' : ''; ?>> Wear</option>
                                     <option value="modern-fashion" <?php echo $category == 'modern-fashion' ? 'selected' : ''; ?>>Modern Fashion</option>
                                     <option value="formal" <?php echo $category == 'formal' ? 'selected' : ''; ?>>Formal Wear</option>
                                     <option value="custom" <?php echo $category == 'custom' ? 'selected' : ''; ?>>Custom Designs</option>

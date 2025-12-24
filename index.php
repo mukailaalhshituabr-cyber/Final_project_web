@@ -27,6 +27,7 @@ if ($currentCategory && !empty($categories)) {
         }
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -300,7 +301,7 @@ if ($currentCategory && !empty($categories)) {
                     <!-- Fallback categories -->
                     <?php 
                     $fallbackCategories = [
-                        ['slug' => 'traditional-wear', 'name' => 'Traditional Wear', 'image' => 'traditional.jpg'],
+                        ['slug' => 'traditional-wear', 'name' => 'Traditional Wear', 'image' => 'assets/images/products/image1.jpeg'],
                         ['slug' => 'modern-fashion', 'name' => 'Modern Fashion', 'image' => 'modern.jpg'],
                         ['slug' => 'formal', 'name' => 'Formal Wear', 'image' => 'formal.jpg'],
                         ['slug' => 'custom', 'name' => 'Custom Designs', 'image' => 'custom.jpg']
