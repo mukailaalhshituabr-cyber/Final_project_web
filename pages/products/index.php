@@ -149,11 +149,11 @@ $clothingImages = [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgG1GajKBVl7S7GZtjbSV-mjjhtq6JYUJNQw&s'
     ],
     'accessories' => [
-        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=500&fit=crop'
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJoz3OcTm4A7dQvhaP6y92jcVA_d6ZcH1bWw&s',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzgjHv4pI_245wt4uBrdyYiwgpad5ErhIU0w&s',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKauWrUI_oCsUUfvxCKIUlML6NXvMrvhFFQg&s',
+        'https://i.etsystatic.com/19372276/r/il/2b94b0/3228169541/il_570xN.3228169541_ovag.jpg',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9U2-Fw2NM9yKJksk7N6yMHa_oRoHHElV6dA&s'
     ],
     'kids' => [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThQ-MnyxlnAcX7cIRQM5MmtpMpl-BThIG_BA&s',
