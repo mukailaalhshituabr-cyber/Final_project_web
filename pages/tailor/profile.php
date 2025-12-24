@@ -1,609 +1,638 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/User.php';
+require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
 
-// Only start session if one doesn't exist to avoid the Notice
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'tailor') {
     header('Location: ../auth/login.php');
     exit();
 }
 
+$db = Database::getInstance();
+$userObj = new User();
 $tailorId = $_SESSION['user_id'];
-$user = new User();
 
-// Get user data
-$userData = $user->getUserById($tailorId);
+$message = '';
+$error = '';
+
+// Get current tailor profile
+$tailor = $userObj->getTailorProfile($tailorId);
+
+if (!$tailor) {
+    header('Location: dashboard.php');
+    exit();
+}
 
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fullName = $_POST['full_name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $address = $_POST['address'] ?? '';
-    $bio = $_POST['bio'] ?? '';
-    
-    // Handle profile picture upload
-    $profilePic = $userData['profile_pic'] ?? 'default-avatar.png';
-    
-    // In pages/customer/profile.php - REPLACE the file upload section starting around line 80:
-
-    // --- PROFILE UPDATE ---
-    if (isset($_POST['update_profile'])) {
-        $profile_pic = $_POST['current_profile_pic'] ?? $userData['profile_pic'];
-        
-        // DEBUG: Log what's happening
-        error_log("Profile update started for user $userId");
-        
-        // Handle file upload
-        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-            error_log("File upload detected: " . $_FILES['profile_pic']['name']);
-            
-            $fileTmpPath = $_FILES['profile_pic']['tmp_name'];
-            $fileName = $_FILES['profile_pic']['name'];
-            $fileSize = $_FILES['profile_pic']['size'];
-            
-            // Check if temp file exists
-            if (!file_exists($fileTmpPath)) {
-                $error = "Uploaded file not found in temp directory. Check PHP upload settings.";
-                error_log("Temp file doesn't exist: $fileTmpPath");
-            } else {
-                // Security checks
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                $maxFileSize = 5 * 1024 * 1024; // 5MB
-                
-                // Get file extension
-                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                
-                // Validate file
-                if (!in_array($fileExtension, $allowedExtensions)) {
-                    $error = "Invalid file type. Allowed: JPG, PNG, GIF, WebP.";
-                } elseif ($fileSize > $maxFileSize) {
-                    $error = "File too large. Maximum size is 5MB.";
-                } else {
-                    // Use RELATIVE path for web access
-                    $avatarDir = '../../assets/images/avatars/';
-                    $newFileName = "user_" . $userId . "_" . time() . "." . $fileExtension;
-                    $dest_path = $avatarDir . $newFileName;
-                    
-                    // Ensure directory exists
-                    if (!is_dir($avatarDir)) {
-                        if (!mkdir($avatarDir, 0755, true)) {
-                            $error = "Failed to create upload directory.";
-                            error_log("Failed to create directory: $avatarDir");
-                        }
-                    }
-                    
-                    if (empty($error)) {
-                        // Check directory permissions
-                        $perms = @fileperms($avatarDir);
-                        error_log("Directory permissions for $avatarDir: " . ($perms ? substr(sprintf('%o', $perms), -4) : 'UNKNOWN'));
-                        
-                        // Try to fix permissions if needed
-                        if (!is_writable($avatarDir)) {
-                            @chmod($avatarDir, 0755);
-                            error_log("Attempted to change permissions to 0755");
-                        }
-                        
-                        // Try to move the file
-                        if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                            error_log("File moved successfully to: $dest_path");
-                            
-                            // Delete old profile picture if not default
-                            $oldProfilePic = $userData['profile_pic'];
-                            if ($oldProfilePic && $oldProfilePic != 'default.jpg') {
-                                $oldPath = $avatarDir . $oldProfilePic;
-                                if (file_exists($oldPath)) {
-                                    @unlink($oldPath);
-                                }
-                            }
-                            
-                            $profile_pic = $newFileName;
-                        } else {
-                            // Detailed error analysis
-                            $error = "Failed to move uploaded file. ";
-                            error_log("move_uploaded_file failed: $fileTmpPath to $dest_path");
-                            
-                            // Check specific issues
-                            if (!is_writable($avatarDir)) {
-                                $error .= "Directory not writable. ";
-                                error_log("Directory not writable: $avatarDir");
-                            }
-                            if (!is_writable(dirname($dest_path))) {
-                                $error .= "Parent directory not writable. ";
-                            }
-                            
-                            // Try alternative method
-                            if (copy($fileTmpPath, $dest_path)) {
-                                error_log("Used copy() as alternative - SUCCESS");
-                                $profile_pic = $newFileName;
-                                $error = ""; // Clear error
-                            } else {
-                                error_log("Alternative copy() also failed");
-                                $error .= "Please check server permissions.";
-                            }
-                        }
-                    }
+    try {
+        // Check which form was submitted
+        if (isset($_POST['update_profile'])) {
+            // Basic information update
+            $required = ['full_name', 'email', 'phone'];
+            foreach ($required as $field) {
+                if (empty($_POST[$field])) {
+                    throw new Exception("Please fill in all required fields");
                 }
             }
-        }
-        
-        // Only proceed with database update if no upload error
-        if (empty($error)) {
-            $updateData = [
-                'full_name'   => trim($_POST['full_name']),
-                'phone'       => trim($_POST['phone'] ?? ''),
-                'address'     => trim($_POST['address'] ?? ''),
-                'bio'         => trim($_POST['bio'] ?? ''),
-                'profile_pic' => $profile_pic
+            
+            $profileData = [
+                'full_name' => trim($_POST['full_name']),
+                'email' => trim($_POST['email']),
+                'phone' => trim($_POST['phone']),
+                'bio' => trim($_POST['bio'] ?? ''),
+                'experience_years' => intval($_POST['experience_years'] ?? 0),
+                'specialization' => trim($_POST['specialization'] ?? ''),
+                'address' => trim($_POST['address'] ?? ''),
+                'city' => trim($_POST['city'] ?? ''),
+                'state' => trim($_POST['state'] ?? ''),
+                'country' => trim($_POST['country'] ?? ''),
+                'zip_code' => trim($_POST['zip_code'] ?? ''),
+                'working_hours' => trim($_POST['working_hours'] ?? ''),
+                'languages' => !empty($_POST['languages']) ? array_map('trim', explode(',', $_POST['languages'])) : []
             ];
             
-            // Validate required fields
-            if (empty($updateData['full_name'])) {
-                $error = "Full name is required.";
-            } elseif ($user->updateProfile($userId, $updateData)) {
-                $success = "Profile updated successfully!";
-                $userData = $user->getUserById($userId); // Refresh data
+            $result = $userObj->updateTailorProfile($tailorId, $profileData);
+            
+            if ($result) {
+                $message = 'Profile updated successfully!';
+                // Refresh tailor data
+                $tailor = $userObj->getTailorProfile($tailorId);
             } else {
-                $error = "Profile update failed in the database.";
+                $error = 'Failed to update profile';
+            }
+            
+        } elseif (isset($_POST['update_social'])) {
+            // Social media update
+            $socialData = [
+                'facebook' => trim($_POST['facebook'] ?? ''),
+                'instagram' => trim($_POST['instagram'] ?? ''),
+                'twitter' => trim($_POST['twitter'] ?? ''),
+                'linkedin' => trim($_POST['linkedin'] ?? ''),
+                'website' => trim($_POST['website'] ?? ''),
+                'youtube' => trim($_POST['youtube'] ?? '')
+            ];
+            
+            $result = $userObj->updateTailorSocial($tailorId, $socialData);
+            
+            if ($result) {
+                $message = 'Social media updated successfully!';
+                $tailor = $userObj->getTailorProfile($tailorId);
+            }
+            
+        } elseif (isset($_POST['update_password'])) {
+            // Password update
+            $currentPassword = $_POST['current_password'];
+            $newPassword = $_POST['new_password'];
+            $confirmPassword = $_POST['confirm_password'];
+            
+            if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+                throw new Exception("Please fill in all password fields");
+            }
+            
+            if ($newPassword !== $confirmPassword) {
+                throw new Exception("New passwords do not match");
+            }
+            
+            if (strlen($newPassword) < 6) {
+                throw new Exception("Password must be at least 6 characters long");
+            }
+            
+            $result = $userObj->changePassword($tailorId, $currentPassword, $newPassword);
+            
+            if ($result['success']) {
+                $message = 'Password changed successfully!';
+            } else {
+                $error = $result['error'];
             }
         }
         
-        // If there's an error, log it
-        if (!empty($error)) {
-            error_log("Profile update error for user $userId: $error");
-        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
-    /*if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../../assets/images/avatars/';
-        
-        // AUTO-FIX: Create the folder if it's missing
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+}
 
-        $fileName = time() . '_' . basename($_FILES['profile_pic']['name']);
-        $uploadFile = $uploadDir . $fileName;
-        
-        if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadFile)) {
-            $profilePic = $fileName;
+// Handle profile picture upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_picture'])) {
+    try {
+        if ($_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            $maxSize = 2 * 1024 * 1024; // 2MB
+            
+            if (!in_array($_FILES['profile_picture']['type'], $allowedTypes)) {
+                throw new Exception("Invalid image type. Allowed: JPG, PNG, GIF, WebP");
+            }
+            
+            if ($_FILES['profile_picture']['size'] > $maxSize) {
+                throw new Exception("Image size must be less than 2MB");
+            }
+            
+            // Generate unique filename
+            $extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+            $filename = 'profile_' . $tailorId . '_' . time() . '.' . $extension;
+            $uploadPath = PROFILE_IMAGES_PATH . $filename;
+            
+            // Delete old profile picture if exists
+            if (!empty($tailor['profile_picture']) && file_exists(PROFILE_IMAGES_PATH . $tailor['profile_picture'])) {
+                unlink(PROFILE_IMAGES_PATH . $tailor['profile_picture']);
+            }
+            
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadPath)) {
+                // Update database
+                $db->update('tailors', ['profile_picture' => $filename], ['id' => $tailorId]);
+                $message = 'Profile picture updated successfully!';
+                $tailor['profile_picture'] = $filename;
+            } else {
+                throw new Exception("Failed to upload image");
+            }
+        } elseif ($_FILES['profile_picture']['error'] !== UPLOAD_ERR_NO_FILE) {
+            throw new Exception("Error uploading file: " . $_FILES['profile_picture']['error']);
         }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
-    
-    // NOTE: Ensure this method exists in User.php!
-    if (method_exists($user, 'updateTailorProfile')) {
-        if ($user->updateTailorProfile($tailorId, $fullName, $email, $phone, $address, $bio, $profilePic)) {
-            $success = "Profile updated successfully!";
-            $userData = $user->getUserById($tailorId); // Refresh data
-        } else {
-            $error = "Failed to update profile.";
+}
+
+// Handle profile picture removal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_picture'])) {
+    try {
+        if (!empty($tailor['profile_picture'])) {
+            $filePath = PROFILE_IMAGES_PATH . $tailor['profile_picture'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            
+            $db->update('tailors', ['profile_picture' => null], ['id' => $tailorId]);
+            $message = 'Profile picture removed successfully!';
+            $tailor['profile_picture'] = null;
         }
-    } else {
-        $error = "Error: updateTailorProfile method is missing in User.php class.";
-    }*/
-        // Add this to your POST handling:
-    if (!empty($_POST['profile_base64'])) {
-        $base64Image = $_POST['profile_base64'];
-        $base64Image = str_replace('data:image/jpeg;base64,', '', $base64Image);
-        $imageData = base64_decode($base64Image);
-        
-        $avatarDir = '../../assets/images/avatars/';
-        $newFileName = "user_" . $userId . "_" . time() . ".jpg";
-        $dest_path = $avatarDir . $newFileName;
-        
-        if (file_put_contents($dest_path, $imageData)) {
-            $profile_pic = $newFileName;
-        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
-        
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - Tailor Dashboard</title>
+    <title>Profile - <?php echo SITE_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
-        .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 3rem 0;
-            margin-bottom: -50px;
+        .profile-container {
+            min-height: calc(100vh - 200px);
         }
-        
-        .profile-avatar {
-            width: 150px;
-            height: 150px;
+        .profile-sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        .profile-content {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        .profile-picture-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 2rem;
+        }
+        .profile-picture {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             border-radius: 50%;
             border: 5px solid white;
-            object-fit: cover;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
-        
-        .profile-stats {
+        .profile-picture-overlay {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
             display: flex;
+            align-items: center;
             justify-content: center;
-            gap: 2rem;
-            margin-top: 1rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
         }
-        
-        .stat-item {
+        .profile-picture-overlay:hover {
+            background: #f8f9fa;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
             text-align: center;
         }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            display: block;
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
         }
-        
-        .stat-label {
-            font-size: 0.875rem;
-            opacity: 0.8;
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
         }
-        
-        .profile-card {
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
         .nav-pills .nav-link {
-            color: #6c757d;
-            padding: 0.75rem 1.5rem;
+            color: #495057;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
             border-radius: 8px;
-            margin-right: 0.5rem;
+            display: flex;
+            align-items: center;
         }
-        
+        .nav-pills .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
         .nav-pills .nav-link.active {
-            background-color: #667eea;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+        }
+        .section-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #667eea;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
     </style>
 </head>
 <body>
     <?php include '../../includes/components/navbar.php'; ?>
     
-    <!-- Profile Header -->
-    <div class="profile-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-3 text-center">
-                    <img src="../../assets/images/avatars/<?php echo $userData['profile_pic'] ?: 'default.jpg'; ?>" 
-                         class="profile-avatar" 
-                         alt="<?php echo htmlspecialchars($userData['full_name']); ?>">
-                </div>
-                <div class="col-md-9">
-                    <h1 class="fw-bold mb-2"><?php echo htmlspecialchars($userData['full_name']); ?></h1>
-                    <p class="lead mb-3">Professional Tailor</p>
-                    <div class="profile-stats">
-                        <div class="stat-item">
-                            <span class="stat-value">4.8</span>
-                            <span class="stat-label">Rating</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">156</span>
-                            <span class="stat-label">Orders</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">24</span>
-                            <span class="stat-label">Products</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">98%</span>
-                            <span class="stat-label">Satisfaction</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="container mt-5">
+    <div class="container profile-container py-5">
         <div class="row">
-            <div class="col-12">
-                <div class="profile-card">
-                    <!-- Navigation -->
-                    <div class="card-header">
-                        <ul class="nav nav-pills">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#profile">Profile</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#settings">Settings</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#security">Security</a>
-                            </li>
-                        </ul>
+            <div class="col-lg-4 mb-4">
+                <div class="profile-sidebar">
+                    <!-- Profile Picture -->
+                    <div class="profile-picture-container">
+                        <?php if (!empty($tailor['profile_picture'])): ?>
+                            <img src="<?php echo PROFILE_IMAGES_URL . $tailor['profile_picture']; ?>" 
+                                 class="profile-picture" alt="Profile Picture">
+                        <?php else: ?>
+                            <div class="profile-picture bg-light d-flex align-items-center justify-content-center">
+                                <i class="bi bi-person-fill" style="font-size: 4rem; color: #667eea;"></i>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Picture Upload/Remove Overlay -->
+                        <div class="profile-picture-overlay" data-bs-toggle="modal" data-bs-target="#pictureModal">
+                            <i class="bi bi-camera-fill" style="color: #667eea;"></i>
+                        </div>
                     </div>
                     
-                    <!-- Tab Content -->
-                    <div class="card-body">
-                        <div class="tab-content">
-                            <!-- Profile Tab -->
-                            <div class="tab-pane fade show active" id="profile">
-                                <?php if (isset($success)): ?>
-                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                        <?php echo $success; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($error)): ?>
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        <?php echo $error; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <form method="POST" enctype="multipart/form-data">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="mb-3 text-center">
-                                                <div class="mb-3">
-                                                    <img src="../../assets/images/avatars/<?php echo $userData['profile_pic'] ?: 'default.jpg'; ?>" 
-                                                         class="rounded-circle" 
-                                                         width="150" 
-                                                         height="150"
-                                                         alt="Profile Picture" 
-                                                         id="profilePreview">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <input type="file" 
-                                                           class="form-control" 
-                                                           name="profile_pic" 
-                                                           accept="image/*"
-                                                           id="profileInput">
-                                                    <small class="text-muted">Max 2MB. JPG, PNG, GIF</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-8">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Full Name *</label>
-                                                        <input type="text" class="form-control" name="full_name" 
-                                                               value="<?php echo htmlspecialchars($userData['full_name']); ?>" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Email *</label>
-                                                        <input type="email" class="form-control" name="email" 
-                                                               value="<?php echo htmlspecialchars($userData['email']); ?>" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Phone</label>
-                                                        <input type="tel" class="form-control" name="phone" 
-                                                               value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Business Name</label>
-                                                        <input type="text" class="form-control" name="business_name" 
-                                                               value="<?php echo htmlspecialchars($userData['business_name'] ?? ''); ?>">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label">Address</label>
-                                                <textarea class="form-control" name="address" rows="2"><?php echo htmlspecialchars($userData['address'] ?? ''); ?></textarea>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label">Bio / About</label>
-                                                <textarea class="form-control" name="bio" rows="4" 
-                                                          placeholder="Tell customers about your tailoring experience, specialties, etc."><?php echo htmlspecialchars($userData['bio'] ?? ''); ?></textarea>
-                                            </div>
-                                            
-                                            <div class="d-flex justify-content-between">
-                                                <button type="submit" class="btn btn-primary">Save Changes</button>
-                                                <a href="dashboard.php" class="btn btn-outline-secondary">Cancel</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
+                    <!-- Tailor Info -->
+                    <h3 class="text-center mb-3"><?php echo htmlspecialchars($tailor['full_name']); ?></h3>
+                    <?php if (!empty($tailor['specialization'])): ?>
+                        <p class="text-center text-muted mb-4">
+                            <i class="bi bi-award me-2"></i><?php echo htmlspecialchars($tailor['specialization']); ?>
+                        </p>
+                    <?php endif; ?>
+                    
+                    <!-- Stats -->
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number"><?php echo $tailor['experience_years'] ?? '0'; ?></div>
+                                <div class="stats-label">Years Experience</div>
                             </div>
-                            
-                            <!-- Settings Tab -->
-                            <div class="tab-pane fade" id="settings">
-                                <h5>Business Settings</h5>
-                                <form>
-                                    <div class="mb-3">
-                                        <label class="form-label">Service Areas</label>
-                                        <input type="text" class="form-control" 
-                                               value="Local Delivery, Shipping Nationwide">
-                                        <small class="text-muted">Where do you provide your services?</small>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Delivery Time</label>
-                                        <select class="form-select">
-                                            <option>Same Day</option>
-                                            <option selected>1-3 Days</option>
-                                            <option>3-5 Days</option>
-                                            <option>1 Week</option>
-                                            <option>2 Weeks</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Working Hours</label>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <input type="time" class="form-control" value="09:00">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <input type="time" class="form-control" value="18:00">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Notification Preferences</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" checked>
-                                            <label class="form-check-label">Email notifications</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" checked>
-                                            <label class="form-check-label">SMS notifications</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox">
-                                            <label class="form-check-label">Push notifications</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-primary">Save Settings</button>
-                                </form>
+                        </div>
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number">
+                                    <?php 
+                                    $rating = $tailor['avg_rating'] ?? 0;
+                                    echo number_format($rating, 1);
+                                    ?>
+                                </div>
+                                <div class="stats-label">Avg Rating</div>
                             </div>
-                            
-                            <!-- Security Tab -->
-                            <div class="tab-pane fade" id="security">
-                                <h5>Change Password</h5>
-                                <form>
-                                    <div class="mb-3">
-                                        <label class="form-label">Current Password</label>
-                                        <input type="password" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <nav class="nav nav-pills flex-column mt-4">
+                        <a class="nav-link active" href="#profile" data-bs-toggle="tab">
+                            <i class="bi bi-person-fill"></i> Basic Info
+                        </a>
+                        <a class="nav-link" href="#social" data-bs-toggle="tab">
+                            <i class="bi bi-link-45deg"></i> Social Media
+                        </a>
+                        <a class="nav-link" href="#password" data-bs-toggle="tab">
+                            <i class="bi bi-shield-lock"></i> Change Password
+                        </a>
+                        <a class="nav-link" href="dashboard.php">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-lg-8">
+                <div class="profile-content">
+                    <?php if ($message): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($message); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($error): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="tab-content">
+                        <!-- Basic Information Tab -->
+                        <div class="tab-pane fade show active" id="profile">
+                            <h3 class="section-title">Basic Information</h3>
+                            <form method="POST" action="">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Full Name *</label>
+                                        <input type="text" class="form-control" name="full_name" 
+                                               value="<?php echo htmlspecialchars($tailor['full_name']); ?>" required>
                                     </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">New Password</label>
-                                        <input type="password" class="form-control">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Email *</label>
+                                        <input type="email" class="form-control" name="email" 
+                                               value="<?php echo htmlspecialchars($tailor['email']); ?>" required>
                                     </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label">Confirm New Password</label>
-                                        <input type="password" class="form-control">
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-primary">Change Password</button>
-                                </form>
-                                
-                                <hr class="my-4">
-                                
-                                <h5>Account Security</h5>
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-shield-check me-2"></i>
-                                    Two-factor authentication is not enabled.
-                                    <a href="#" class="alert-link">Enable 2FA</a>
                                 </div>
                                 
-                                <div class="alert alert-danger">
-                                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h6>
-                                    <p class="mb-2">Once you delete your account, there is no going back.</p>
-                                    <button class="btn btn-outline-danger btn-sm">Delete Account</button>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Phone *</label>
+                                        <input type="tel" class="form-control" name="phone" 
+                                               value="<?php echo htmlspecialchars($tailor['phone'] ?? ''); ?>" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Experience (Years)</label>
+                                        <input type="number" class="form-control" name="experience_years" 
+                                               value="<?php echo $tailor['experience_years'] ?? '0'; ?>" min="0" max="50">
+                                    </div>
                                 </div>
-                            </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Specialization</label>
+                                    <input type="text" class="form-control" name="specialization" 
+                                           value="<?php echo htmlspecialchars($tailor['specialization'] ?? ''); ?>"
+                                           placeholder="e.g., Traditional Wear, Wedding Dresses">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Bio/Description</label>
+                                    <textarea class="form-control" name="bio" rows="4" 
+                                              placeholder="Tell customers about your skills and experience"><?php echo htmlspecialchars($tailor['bio'] ?? ''); ?></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Languages (comma separated)</label>
+                                    <input type="text" class="form-control" name="languages" 
+                                           value="<?php echo !empty($tailor['languages']) ? implode(', ', $tailor['languages']) : ''; ?>"
+                                           placeholder="e.g., English, French, Arabic">
+                                </div>
+                                
+                                <h4 class="mt-4 mb-3">Address Information</h4>
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">Address</label>
+                                        <input type="text" class="form-control" name="address" 
+                                               value="<?php echo htmlspecialchars($tailor['address'] ?? ''); ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">City</label>
+                                        <input type="text" class="form-control" name="city" 
+                                               value="<?php echo htmlspecialchars($tailor['city'] ?? ''); ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">State</label>
+                                        <input type="text" class="form-control" name="state" 
+                                               value="<?php echo htmlspecialchars($tailor['state'] ?? ''); ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Zip Code</label>
+                                        <input type="text" class="form-control" name="zip_code" 
+                                               value="<?php echo htmlspecialchars($tailor['zip_code'] ?? ''); ?>">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Working Hours</label>
+                                    <input type="text" class="form-control" name="working_hours" 
+                                           value="<?php echo htmlspecialchars($tailor['working_hours'] ?? ''); ?>"
+                                           placeholder="e.g., Mon-Fri 9AM-6PM, Sat 10AM-2PM">
+                                </div>
+                                
+                                <button type="submit" name="update_profile" class="btn btn-save mt-3">
+                                    <i class="bi bi-save me-2"></i>Save Changes
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- Social Media Tab -->
+                        <div class="tab-pane fade" id="social">
+                            <h3 class="section-title">Social Media Links</h3>
+                            <form method="POST" action="">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-facebook me-2" style="color: #1877F2;"></i>Facebook
+                                        </label>
+                                        <input type="url" class="form-control" name="facebook" 
+                                               value="<?php echo htmlspecialchars($tailor['facebook'] ?? ''); ?>"
+                                               placeholder="https://facebook.com/yourpage">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-instagram me-2" style="color: #E4405F;"></i>Instagram
+                                        </label>
+                                        <input type="url" class="form-control" name="instagram" 
+                                               value="<?php echo htmlspecialchars($tailor['instagram'] ?? ''); ?>"
+                                               placeholder="https://instagram.com/yourprofile">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-twitter me-2" style="color: #1DA1F2;"></i>Twitter
+                                        </label>
+                                        <input type="url" class="form-control" name="twitter" 
+                                               value="<?php echo htmlspecialchars($tailor['twitter'] ?? ''); ?>"
+                                               placeholder="https://twitter.com/yourprofile">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-linkedin me-2" style="color: #0A66C2;"></i>LinkedIn
+                                        </label>
+                                        <input type="url" class="form-control" name="linkedin" 
+                                               value="<?php echo htmlspecialchars($tailor['linkedin'] ?? ''); ?>"
+                                               placeholder="https://linkedin.com/in/yourprofile">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-youtube me-2" style="color: #FF0000;"></i>YouTube
+                                        </label>
+                                        <input type="url" class="form-control" name="youtube" 
+                                               value="<?php echo htmlspecialchars($tailor['youtube'] ?? ''); ?>"
+                                               placeholder="https://youtube.com/c/yourchannel">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="bi bi-globe me-2"></i>Website
+                                        </label>
+                                        <input type="url" class="form-control" name="website" 
+                                               value="<?php echo htmlspecialchars($tailor['website'] ?? ''); ?>"
+                                               placeholder="https://yourwebsite.com">
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" name="update_social" class="btn btn-save mt-3">
+                                    <i class="bi bi-save me-2"></i>Save Social Links
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- Change Password Tab -->
+                        <div class="tab-pane fade" id="password">
+                            <h3 class="section-title">Change Password</h3>
+                            <form method="POST" action="">
+                                <div class="mb-3">
+                                    <label class="form-label">Current Password *</label>
+                                    <input type="password" class="form-control" name="current_password" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">New Password *</label>
+                                    <input type="password" class="form-control" name="new_password" required
+                                           pattern=".{6,}" title="Password must be at least 6 characters">
+                                    <small class="text-muted">At least 6 characters</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm New Password *</label>
+                                    <input type="password" class="form-control" name="confirm_password" required>
+                                </div>
+                                
+                                <button type="submit" name="update_password" class="btn btn-save mt-3">
+                                    <i class="bi bi-shield-lock me-2"></i>Change Password
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        
     </div>
-    
+
+    <!-- Profile Picture Modal -->
+    <div class="modal fade" id="pictureModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Profile Picture</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="" enctype="multipart/form-data" id="pictureForm">
+                        <div class="mb-3">
+                            <label class="form-label">Upload New Picture</label>
+                            <input type="file" class="form-control" name="profile_picture" accept="image/*">
+                            <small class="text-muted">Max size: 2MB. Allowed: JPG, PNG, GIF, WebP</small>
+                        </div>
+                        
+                        <?php if (!empty($tailor['profile_picture'])): ?>
+                        <div class="text-center mt-4">
+                            <p class="text-muted">Or remove current picture</p>
+                            <button type="submit" name="remove_picture" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>Remove Picture
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="pictureForm" class="btn btn-save">Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Profile picture preview
-        document.getElementById('profileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('profilePreview').src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        // Tab activation
+        // Initialize tab functionality
         document.addEventListener('DOMContentLoaded', function() {
-            const hash = window.location.hash;
-            if (hash) {
-                const tab = new bootstrap.Tab(document.querySelector(`a[href="${hash}"]`));
-                tab.show();
+            // Show tab based on URL hash
+            if (window.location.hash) {
+                const trigger = document.querySelector(`[href="${window.location.hash}"]`);
+                if (trigger) {
+                    const tab = new bootstrap.Tab(trigger);
+                    tab.show();
+                }
+            }
+            
+            // Update URL hash when tab changes
+            const tabTriggers = document.querySelectorAll('a[data-bs-toggle="tab"]');
+            tabTriggers.forEach(trigger => {
+                trigger.addEventListener('shown.bs.tab', function(e) {
+                    window.location.hash = e.target.getAttribute('href');
+                });
+            });
+            
+            // Image preview for profile picture upload
+            const fileInput = document.querySelector('input[name="profile_picture"]');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    if (e.target.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.querySelector('.profile-picture').src = e.target.result;
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                    }
+                });
             }
         });
-
-        
-    </script>
-
-    // Add this ALTERNATIVE upload method to your profile.php form:
-
-    <!-- Add this as an alternative upload method in your form -->
-    <div class="mb-4">
-        <label class="form-label fw-bold">Or take a photo with your camera:</label>
-        <div id="camera-container" class="d-none">
-            <video id="camera-preview" width="320" height="240" autoplay></video>
-            <button type="button" id="capture-btn" class="btn btn-success mt-2">
-                <i class="bi bi-camera"></i> Capture Photo
-            </button>
-        </div>
-        <button type="button" id="start-camera-btn" class="btn btn-outline-secondary">
-            <i class="bi bi-camera-video"></i> Use Camera
-        </button>
-        <canvas id="photo-canvas" class="d-none"></canvas>
-        <input type="hidden" id="profile_base64" name="profile_base64">
-    </div>
-
-    <script>
-    // Camera functionality as backup
-    document.getElementById('start-camera-btn').addEventListener('click', function() {
-        const constraints = { video: true };
-        
-        navigator.mediaDevices.getUserMedia(constraints)
-            .then(function(stream) {
-                const video = document.getElementById('camera-preview');
-                video.srcObject = stream;
-                document.getElementById('camera-container').classList.remove('d-none');
-                this.style.display = 'none';
-            })
-            .catch(function(err) {
-                alert('Camera access denied: ' + err.message);
-            });
-    });
-
-    document.getElementById('capture-btn').addEventListener('click', function() {
-        const video = document.getElementById('camera-preview');
-        const canvas = document.getElementById('photo-canvas');
-        const context = canvas.getContext('2d');
-        
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert to base64
-        const base64Image = canvas.toDataURL('image/jpeg');
-        document.getElementById('profile_base64').value = base64Image;
-        
-        // Show preview
-        const img = document.querySelector('.profile-avatar');
-        img.src = base64Image;
-        
-        // Stop camera
-        video.srcObject.getTracks().forEach(track => track.stop());
-        document.getElementById('camera-container').classList.add('d-none');
-    });
     </script>
 </body>
 </html>

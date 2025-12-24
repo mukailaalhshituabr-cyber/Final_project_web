@@ -1,63 +1,98 @@
 <?php
-
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
-require_once ROOT_PATH . '/includes/classes/User.php';
-require_once ROOT_PATH . '/includes/classes/Order.php';
 require_once ROOT_PATH . '/includes/classes/Product.php';
-require_once ROOT_PATH . '/includes/functions/product_functions.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Check authentication and tailor role
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'tailor') {
     header('Location: ../auth/login.php');
     exit();
 }
 
-$user = new User();
-$product = new Product();
-$productFunctions = new ProductFunctions();
-
+$db = Database::getInstance();
+$productObj = new Product();
 $tailorId = $_SESSION['user_id'];
-$userData = $user->getUserById($tailorId);
 
-// Handle product actions
-$action = $_GET['action'] ?? '';
-$productId = $_GET['id'] ?? 0;
-$message = '';
-$error = '';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['add_product'])) {
-        $result = $productFunctions->addProduct($tailorId, $_POST, $_FILES);
+// Handle actions
+if (isset($_GET['action'])) {
+    $productId = intval($_GET['id'] ?? 0);
+    
+    if ($_GET['action'] == 'delete' && $productId) {
+        $result = $productObj->deleteProduct($productId);
         if ($result['success']) {
-            $message = 'Product added successfully!';
+            header('Location: products.php?deleted=1');
         } else {
-            $error = implode(', ', $result['errors']);
+            header('Location: products.php?error=' . urlencode($result['error']));
         }
-    } elseif (isset($_POST['update_product'])) {
-        $result = $productFunctions->updateProduct($productId, $tailorId, $_POST, $_FILES);
-        if ($result['success']) {
-            $message = 'Product updated successfully!';
-        } else {
-            $error = implode(', ', $result['errors']);
-        }
+        exit();
+    } elseif ($_GET['action'] == 'toggle_status' && $productId) {
+        $db->query("UPDATE products SET status = IF(status = 'active', 'inactive', 'active') WHERE id = :id AND tailor_id = :tailor_id");
+        $db->bind(':id', $productId);
+        $db->bind(':tailor_id', $tailorId);
+        $db->execute();
+        
+        header('Location: products.php?status_updated=1');
+        exit();
+    } elseif ($_GET['action'] == 'toggle_featured' && $productId) {
+        $db->query("UPDATE products SET featured = NOT featured WHERE id = :id AND tailor_id = :tailor_id");
+        $db->bind(':id', $productId);
+        $db->bind(':tailor_id', $tailorId);
+        $db->execute();
+        
+        header('Location: products.php?featured_updated=1');
+        exit();
     }
 }
 
-// Handle delete action
-if ($action == 'delete' && $productId) {
-    $result = $productFunctions->deleteProduct($productId, $tailorId);
-    if ($result['success']) {
-        $message = 'Product deleted successfully!';
-    } else {
-        $error = $result['message'];
-    }
-}
+// Get filter parameters
+$status = $_GET['status'] ?? '';
+$category = $_GET['category'] ?? '';
+$search = $_GET['search'] ?? '';
+$page = max(1, intval($_GET['page'] ?? 1));
+$perPage = 12;
 
-// Get all tailor products
-$products = $product->getTailorProducts($tailorId);
+// Get products with filters
+$filters = ['tailor_id' => $tailorId];
+if ($status) $filters['status'] = $status;
+if ($category) $filters['category'] = $category;
+if ($search) $filters['search'] = $search;
+
+$allProducts = $productObj->getProductsByTailor($tailorId, null, $status ?: null);
+$totalProducts = count($allProducts);
+$totalPages = ceil($totalProducts / $perPage);
+$offset = ($page - 1) * $perPage;
+
+// Get paginated products
+$db->query("
+    SELECT p.*, 
+           (SELECT COUNT(*) FROM order_items oi WHERE oi.product_id = p.id) as total_orders,
+           (SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.product_id = p.id) as total_sold
+    FROM products p
+    WHERE p.tailor_id = :tailor_id
+    " . ($status ? " AND p.status = :status" : "") . "
+    " . ($category ? " AND (p.category = :category OR p.subcategory = :category)" : "") . "
+    " . ($search ? " AND (p.title LIKE :search OR p.description LIKE :search)" : "") . "
+    ORDER BY p.created_at DESC
+    LIMIT :limit OFFSET :offset
+");
+
+$db->bind(':tailor_id', $tailorId);
+$db->bind(':limit', $perPage, PDO::PARAM_INT);
+$db->bind(':offset', $offset, PDO::PARAM_INT);
+
+if ($status) $db->bind(':status', $status);
+if ($category) $db->bind(':category', $category);
+if ($search) $db->bind(':search', "%$search%");
+
+$products = $db->resultSet();
+
+// Get product statistics
+$stats = $productObj->getProductStatistics($tailorId);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,425 +101,474 @@ $products = $product->getTailorProducts($tailorId);
     <title>My Products - <?php echo SITE_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Add styles from the dashboard page */
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
+        .products-container {
+            min-height: calc(100vh - 200px);
         }
-        
-        .dashboard-container {
-            padding: 2rem 0;
+        .stats-card {
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease;
         }
-        
-        .sidebar {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            height: 100%;
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .product-card {
+            border-radius: 10px;
             overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
         }
-        
-        /* ... (Copy sidebar styles from dashboard.php) ... */
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .product-image {
+            height: 180px;
+            object-fit: cover;
+            width: 100%;
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+        }
+        .featured-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+        }
+        .stock-warning {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            color: #dee2e6;
+            margin-bottom: 1rem;
+        }
+        .dropdown-action {
+            padding: 0.25rem 0.5rem;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .dropdown-action:hover {
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
     <?php include '../../includes/components/navbar.php'; ?>
     
-    <div class="container-fluid dashboard-container">
-        <div class="row g-4">
-            <!-- Sidebar (same as dashboard) -->
-            <div class="col-lg-3">
-                <?php include '../../includes/components/sidebar.php'; ?>
+    <div class="container products-container py-5">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="h3 fw-bold">My Products</h1>
+                    <div class="d-flex gap-2">
+                        <a href="add-product.php" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i> Add New Product
+                        </a>
+                        <a href="products-export.php" class="btn btn-outline-secondary">
+                            <i class="bi bi-download me-2"></i> Export
+                        </a>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Main Content -->
-            <div class="col-lg-9">
-                <div class="main-content">
-                    <!-- Header -->
-                    <div class="dashboard-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <div class="dashboard-title">
-                                    <h1>Product Management</h1>
-                                    <p>Manage your clothing designs and products</p>
+        </div>
+
+        <!-- Messages -->
+        <?php if (isset($_GET['deleted'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>Product deleted successfully
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['status_updated'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>Product status updated
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['featured_updated'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>Featured status updated
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($_GET['error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php endif; ?>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card bg-white shadow-sm border">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon me-3 bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-0"><?php echo $stats['total_products']; ?></h3>
+                            <p class="text-muted mb-0">Total Products</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card bg-white shadow-sm border">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon me-3 bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-0"><?php echo $stats['active_products']; ?></h3>
+                            <p class="text-muted mb-0">Active Products</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card bg-white shadow-sm border">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon me-3 bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-0"><?php echo $stats['featured_products']; ?></h3>
+                            <p class="text-muted mb-0">Featured</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card bg-white shadow-sm border">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon me-3 bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-0"><?php echo $stats['low_stock']; ?></h3>
+                            <p class="text-muted mb-0">Low Stock</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <form method="GET" action="" class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="status">
+                                    <option value="">All Status</option>
+                                    <option value="draft" <?php echo $status == 'draft' ? 'selected' : ''; ?>>Draft</option>
+                                    <option value="active" <?php echo $status == 'active' ? 'selected' : ''; ?>>Active</option>
+                                    <option value="inactive" <?php echo $status == 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                    <option value="out_of_stock" <?php echo $status == 'out_of_stock' ? 'selected' : ''; ?>>Out of Stock</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" name="category">
+                                    <option value="">All Categories</option>
+                                    <option value="traditional-wear" <?php echo $category == 'traditional-wear' ? 'selected' : ''; ?>>Traditional Wear</option>
+                                    <option value="modern-fashion" <?php echo $category == 'modern-fashion' ? 'selected' : ''; ?>>Modern Fashion</option>
+                                    <option value="formal" <?php echo $category == 'formal' ? 'selected' : ''; ?>>Formal Wear</option>
+                                    <option value="custom" <?php echo $category == 'custom' ? 'selected' : ''; ?>>Custom Designs</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Search</label>
+                                <input type="text" class="form-control" name="search" 
+                                       placeholder="Search products..." 
+                                       value="<?php echo htmlspecialchars($search); ?>">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-filter me-2"></i> Filter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <?php if (!empty($products)): ?>
+            <div class="row">
+                <?php foreach ($products as $product): 
+                    $images = json_decode($product['images'] ?? '[]', true);
+                    $firstImage = !empty($images) && is_array($images) ? $images[0] : ASSETS_URL . 'images/products/default.jpg';
+                ?>
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                    <div class="card product-card border-0 shadow-sm">
+                        <div class="position-relative">
+                            <img src="<?php echo htmlspecialchars($firstImage); ?>" 
+                                 class="product-image"
+                                 alt="<?php echo htmlspecialchars($product['title']); ?>"
+                                 onerror="this.src='<?php echo ASSETS_URL; ?>images/products/default.jpg'">
+                            
+                            <!-- Status Badge -->
+                            <?php $statusClass = [
+                                'draft' => 'secondary',
+                                'active' => 'success',
+                                'inactive' => 'warning',
+                                'out_of_stock' => 'danger'
+                            ][$product['status']] ?? 'secondary'; ?>
+                            <span class="status-badge badge bg-<?php echo $statusClass; ?>">
+                                <?php echo ucfirst(str_replace('_', ' ', $product['status'])); ?>
+                            </span>
+                            
+                            <!-- Featured Badge -->
+                            <?php if ($product['featured']): ?>
+                            <span class="featured-badge badge bg-warning">
+                                <i class="bi bi-star-fill me-1"></i> Featured
+                            </span>
+                            <?php endif; ?>
+                            
+                            <!-- Action Dropdown -->
+                            <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm rounded-circle" type="button" 
+                                            data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item dropdown-action" 
+                                               href="edit-product.php?id=<?php echo $product['id']; ?>">
+                                                <i class="bi bi-pencil me-2"></i> Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item dropdown-action" 
+                                               href="products.php?action=toggle_status&id=<?php echo $product['id']; ?>">
+                                                <i class="bi bi-toggle-on me-2"></i> 
+                                                <?php echo $product['status'] == 'active' ? 'Deactivate' : 'Activate'; ?>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item dropdown-action" 
+                                               href="products.php?action=toggle_featured&id=<?php echo $product['id']; ?>">
+                                                <i class="bi bi-star me-2"></i> 
+                                                <?php echo $product['featured'] ? 'Unfeature' : 'Feature'; ?>
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item dropdown-action text-danger" 
+                                               href="products.php?action=delete&id=<?php echo $product['id']; ?>"
+                                               onclick="return confirm('Are you sure you want to delete this product?')">
+                                                <i class="bi bi-trash me-2"></i> Delete
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
-                            <div class="col-md-4 text-end">
-                                <a href="?action=add" class="btn btn-primary">
-                                    <i class="bi bi-plus-circle me-2"></i> Add New Product
+                        </div>
+                        
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2">
+                                <a href="../products/view.php?id=<?php echo $product['id']; ?>" 
+                                   class="text-decoration-none text-dark">
+                                    <?php echo htmlspecialchars($product['title']); ?>
+                                </a>
+                            </h6>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="h5 text-primary fw-bold"><?php echo format_price($product['price']); ?></span>
+                                <?php if ($product['compare_price'] && $product['compare_price'] > $product['price']): ?>
+                                <small class="text-muted text-decoration-line-through">
+                                    <?php echo format_price($product['compare_price']); ?>
+                                </small>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Category</small>
+                                    <span class="badge bg-light text-dark"><?php echo $product['category']; ?></span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Stock</small>
+                                    <span class="<?php echo $product['stock_quantity'] <= $product['low_stock_threshold'] ? 'stock-warning' : 'text-success'; ?>">
+                                        <?php echo $product['stock_quantity']; ?> units
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Orders</small>
+                                    <span><?php echo $product['total_orders'] ?? 0; ?></span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Sold</small>
+                                    <span><?php echo $product['total_sold'] ?? 0; ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-white border-0 pt-0">
+                            <div class="d-grid gap-2">
+                                <a href="edit-product.php?id=<?php echo $product['id']; ?>" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil me-2"></i> Edit Product
+                                </a>
+                                <a href="../products/view.php?id=<?php echo $product['id']; ?>" 
+                                   class="btn btn-outline-secondary btn-sm" target="_blank">
+                                    <i class="bi bi-eye me-2"></i> View Live
                                 </a>
                             </div>
                         </div>
                     </div>
-                    
-                    <?php if ($message): ?>
-                        <div class="alert alert-success"><?php echo $message; ?></div>
-                    <?php endif; ?>
-                    
-                    <?php if ($error): ?>
-                        <div class="alert alert-danger"><?php echo $error; ?></div>
-                    <?php endif; ?>
-                    
-                    <?php if ($action == 'add' || $action == 'edit'): ?>
-                        <!-- Product Form -->
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body p-4">
-                                <h4 class="fw-bold mb-4"><?php echo $action == 'add' ? 'Add New Product' : 'Edit Product'; ?></h4>
-                                
-                                <form method="POST" enctype="multipart/form-data" id="productForm">
-                                    <?php if ($action == 'edit' && $productId): ?>
-                                        <input type="hidden" name="update_product" value="1">
-                                        <?php 
-                                        $productData = $product->getById($productId);
-                                        if (!$productData || $productData['tailor_id'] != $tailorId) {
-                                            echo '<div class="alert alert-danger">Product not found or access denied</div>';
-                                            exit();
-                                        }
-                                        ?>
-                                    <?php else: ?>
-                                        <input type="hidden" name="add_product" value="1">
-                                    <?php endif; ?>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Product Title *</label>
-                                                <input type="text" 
-                                                       class="form-control" 
-                                                       name="title" 
-                                                       value="<?php echo $productData['title'] ?? ''; ?>"
-                                                       required>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Description *</label>
-                                                <textarea class="form-control" 
-                                                          name="description" 
-                                                          rows="4"
-                                                          required><?php echo $productData['description'] ?? ''; ?></textarea>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-bold">Price (CFA) *</label>
-                                                    <input type="number" 
-                                                           class="form-control" 
-                                                           name="price" 
-                                                           step="0.01"
-                                                           value="<?php echo $productData['price'] ?? ''; ?>"
-                                                           required>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-bold">Category *</label>
-                                                    <select class="form-select" name="category" required>
-                                                        <option value="">Select Category</option>
-                                                        <option value="traditional" <?php echo ($productData['category'] ?? '') == 'traditional' ? 'selected' : ''; ?>>Traditional</option>
-                                                        <option value="modern" <?php echo ($productData['category'] ?? '') == 'modern' ? 'selected' : ''; ?>>Modern</option>
-                                                        <option value="formal" <?php echo ($productData['category'] ?? '') == 'formal' ? 'selected' : ''; ?>>Formal</option>
-                                                        <option value="casual" <?php echo ($productData['category'] ?? '') == 'casual' ? 'selected' : ''; ?>>Casual</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-bold">Material</label>
-                                                    <input type="text" 
-                                                           class="form-control" 
-                                                           name="material"
-                                                           value="<?php echo $productData['material'] ?? ''; ?>">
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-bold">Size</label>
-                                                    <select class="form-select" name="size">
-                                                        <option value="">Select Size</option>
-                                                        <option value="XS" <?php echo ($productData['size'] ?? '') == 'XS' ? 'selected' : ''; ?>>XS</option>
-                                                        <option value="S" <?php echo ($productData['size'] ?? '') == 'S' ? 'selected' : ''; ?>>S</option>
-                                                        <option value="M" <?php echo ($productData['size'] ?? '') == 'M' ? 'selected' : ''; ?>>M</option>
-                                                        <option value="L" <?php echo ($productData['size'] ?? '') == 'L' ? 'selected' : ''; ?>>L</option>
-                                                        <option value="XL" <?php echo ($productData['size'] ?? '') == 'XL' ? 'selected' : ''; ?>>XL</option>
-                                                        <option value="Custom" <?php echo ($productData['size'] ?? '') == 'Custom' ? 'selected' : ''; ?>>Custom</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Color</label>
-                                                <input type="text" 
-                                                       class="form-control" 
-                                                       name="color"
-                                                       value="<?php echo $productData['color'] ?? ''; ?>">
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Product Images *</label>
-                                                <input type="file" 
-                                                    class="form-control" 
-                                                    name="images[]" 
-                                                    multiple 
-                                                    accept="image/*"
-                                                    <?php echo $action == 'add' ? 'required' : ''; ?>>
-                                                <small class="text-muted d-block mt-1">First image will be the main display</small>
-                                                
-                                                <?php if ($action == 'edit' && !empty($productData['images'])): ?>
-                                                    <div class="mt-3">
-                                                        <label class="form-label small fw-bold text-uppercase text-secondary">Current Images:</label>
-                                                        <div class="row g-2">
-                                                            <?php 
-                                                            $images = json_decode($productData['images'], true);
-                                                            
-                                                            // Fallback: if it's not JSON, put it in an array so the loop still works
-                                                            if (!is_array($images)) {
-                                                                $images = [$productData['images']];
-                                                            }
+                </div>
+                <?php endforeach; ?>
+            </div>
 
-                                                            foreach ($images as $img): 
-                                                                // Remove any leading slashes to prevent "localhost//assets..."
-                                                                $cleanImg = ltrim($img, '/');
-                                                                $imgSrc = SITE_URL . "/assets/images/products/" . $cleanImg;
-                                                            ?>
-                                                                <div class="col-6">
-                                                                    <div class="position-relative border rounded overflow-hidden shadow-sm bg-light" style="height: 120px;">
-                                                                        <img src="<?php echo $imgSrc; ?>" 
-                                                                            class="w-100 h-100" 
-                                                                            style="object-fit: cover;"
-                                                                            alt="Product Image"
-                                                                            data-debug-path="<?php echo $imgSrc; ?>"
-                                                                            onerror="this.src='<?php echo SITE_URL; ?>/assets/images/placeholder.jpg'; this.classList.add('p-3');">
-                                                                    </div>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Stock Quantity</label>
-                                                <input type="number" 
-                                                    class="form-control shadow-sm" 
-                                                    name="stock" 
-                                                    min="0"
-                                                    value="<?php echo $productData['stock'] ?? 1; ?>">
-                                            </div>
-                                            
-                                            <div class="card bg-light border-0 mb-3">
-                                                <div class="card-body py-2">
-                                                    <div class="form-check form-switch">
-                                                        <input class="form-check-input" 
-                                                            type="checkbox" 
-                                                            name="is_customizable" 
-                                                            id="customizable"
-                                                            <?php echo ($productData['is_customizable'] ?? 0) ? 'checked' : ''; ?>>
-                                                        <label class="form-check-label fw-bold" for="customizable">
-                                                            Allow Customization
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <?php if ($action == 'edit'): ?>
-                                                <div class="p-3 border rounded border-primary-subtle bg-white">
-                                                    <label class="form-label fw-bold">Display Status</label>
-                                                    <select class="form-select" name="status">
-                                                        <option value="active" <?php echo ($productData['status'] ?? '') == 'active' ? 'selected' : ''; ?>>Active (Visible)</option>
-                                                        <option value="inactive" <?php echo ($productData['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>Inactive (Hidden)</option>
-                                                    </select>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mt-4">
-                                        <button type="submit" class="btn btn-primary px-4">
-                                            <?php echo $action == 'add' ? 'Add Product' : 'Update Product'; ?>
-                                        </button>
-                                        <a href="products.php" class="btn btn-outline-secondary ms-2">Cancel</a>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                        
-                    <?php else: ?>
-                        <!-- Products Grid -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" placeholder="Search products..." id="searchInput">
-                                    <button class="btn btn-outline-secondary" type="button">
-                                        <i class="bi bi-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <select class="form-select" id="categoryFilter">
-                                    <option value="">All Categories</option>
-                                    <option value="traditional">Traditional</option>
-                                    <option value="modern">Modern</option>
-                                    <option value="formal">Formal</option>
-                                    <option value="casual">Casual</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <select class="form-select" id="statusFilter">
-                                    <option value="">All Status</option>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="row" id="productsGrid">
-                            <?php if (!empty($products)): ?>
-                                <?php foreach ($products as $product): ?>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card product-card border-0 shadow-sm h-100">
-                                            <?php if ($product['status'] == 'inactive'): ?>
-                                                <div class="product-badge bg-secondary">Inactive</div>
-                                            <?php elseif ($product['is_customizable']): ?>
-                                                <div class="product-badge bg-warning">Custom</div>
-                                            <?php endif; ?>
-                                            
-                                            <?php if ($product['stock'] <= 3): ?>
-                                                <div class="product-badge bg-danger" style="left: 15px;">Low Stock</div>
-                                            <?php endif; ?>
-                                            
-                                            <img src="<?php echo SITE_URL; ?>/assets/images/products/<?php 
-                                                $images = json_decode($product['images'], true);
-                                                echo $images[0] ?? 'default.jpg'; 
-                                            ?>" 
-                                                 class="card-img-top" 
-                                                 alt="<?php echo htmlspecialchars($product['title']); ?>"
-                                                 style="height: 200px; object-fit: cover;">
-                                            <div class="card-body">
-                                                <h5 class="fw-bold mb-2"><?php echo htmlspecialchars($product['title']); ?></h5>
-                                                <p class="text-muted small mb-2"><?php echo htmlspecialchars($product['category']); ?></p>
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                                    <span class="h5 text-primary mb-0">$<?php echo number_format($product['price'], 2); ?></span>
-                                                    <div class="text-warning">
-                                                        <i class="bi bi-star-fill"></i>
-                                                        <span class="ms-1"><?php echo number_format($product['rating'], 1); ?></span>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="badge bg-light text-dark">Stock: <?php echo $product['stock']; ?></span>
-                                                    <span class="badge bg-<?php echo $product['status'] == 'active' ? 'success' : 'secondary'; ?>">
-                                                        <?php echo ucfirst($product['status']); ?>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="card-footer bg-white border-0">
-                                                <div class="d-flex gap-2">
-                                                    <a href="?action=edit&id=<?php echo $product['id']; ?>" class="btn btn-sm btn-outline-primary flex-fill">
-                                                        <i class="bi bi-pencil"></i> Edit
-                                                    </a>
-                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                            onclick="confirmDelete(<?php echo $product['id']; ?>)">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="col-12 text-center py-5">
-                                    <i class="bi bi-grid display-4 text-muted mb-3"></i>
-                                    <h4 class="text-muted mb-3">No products yet</h4>
-                                    <p class="text-muted mb-4">Start by adding your first clothing design</p>
-                                    <a href="?action=add" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle me-2"></i> Add First Product
-                                    </a>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <!-- Product Statistics -->
-                        <div class="row mt-5">
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h3 class="fw-bold text-primary"><?php echo count($products); ?></h3>
-                                        <p class="text-muted mb-0">Total Products</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h3 class="fw-bold text-success"><?php 
-                                            $active = array_filter($products, function($p) { return $p['status'] == 'active'; });
-                                            echo count($active);
-                                        ?></h3>
-                                        <p class="text-muted mb-0">Active Products</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h3 class="fw-bold text-warning"><?php 
-                                            $customizable = array_filter($products, function($p) { return $p['is_customizable']; });
-                                            echo count($customizable);
-                                        ?></h3>
-                                        <p class="text-muted mb-0">Customizable</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h3 class="fw-bold text-danger"><?php 
-                                            $lowStock = array_filter($products, function($p) { return $p['stock'] <= 3; });
-                                            echo count($lowStock);
-                                        ?></h3>
-                                        <p class="text-muted mb-0">Low Stock</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Pagination -->
+            <?php if ($totalPages > 1): ?>
+            <nav aria-label="Product pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    </li>
+                    <?php endfor; ?>
+                    
+                    <li class="page-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
+            
+        <?php else: ?>
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-box"></i>
+                </div>
+                <h3 class="mb-3">No products found</h3>
+                <p class="text-muted mb-4">
+                    <?php echo $status || $category || $search ? 'Try adjusting your filters' : 'Start by adding your first product'; ?>
+                </p>
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
+                    <a href="add-product.php" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i> Add Your First Product
+                    </a>
+                    <?php if ($status || $category || $search): ?>
+                    <a href="products.php" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-x-circle me-2"></i> Clear Filters
+                    </a>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+        <?php endif; ?>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <?php include '../../includes/components/footer.php'; ?>
+
     <script>
-        function confirmDelete(productId) {
-            if (confirm('Are you sure you want to delete this product?')) {
-                window.location.href = 'products.php?action=delete&id=' + productId;
-            }
-        }
-        
-        // Filter products
-        $('#searchInput, #categoryFilter, #statusFilter').on('input change', function() {
-            const search = $('#searchInput').val().toLowerCase();
-            const category = $('#categoryFilter').val();
-            const status = $('#statusFilter').val();
-            
-            $('.product-card').each(function() {
-                const title = $(this).find('h5').text().toLowerCase();
-                const productCategory = $(this).find('.text-muted').text().toLowerCase();
-                const productStatus = $(this).find('.badge:last-child').text().toLowerCase();
+        // Quick status update
+        document.querySelectorAll('.btn-quick-status').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const productId = this.dataset.productId;
+                const action = this.dataset.action;
                 
-                const matchesSearch = title.includes(search) || productCategory.includes(search);
-                const matchesCategory = !category || productCategory.includes(category);
-                const matchesStatus = !status || productStatus.includes(status);
-                
-                if (matchesSearch && matchesCategory && matchesStatus) {
-                    $(this).closest('.col-md-4').show();
-                } else {
-                    $(this).closest('.col-md-4').hide();
-                }
+                fetch('quick-update.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        action: action
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
             });
+        });
+        
+        // Bulk actions
+        document.getElementById('bulkAction').addEventListener('change', function() {
+            const action = this.value;
+            const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            if (action && selectedProducts.length > 0) {
+                if (confirm(`Are you sure you want to ${action} ${selectedProducts.length} product(s)?`)) {
+                    const formData = new FormData();
+                    formData.append('action', action);
+                    selectedProducts.forEach(id => formData.append('product_ids[]', id));
+                    
+                    fetch('bulk-actions.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    });
+                }
+            }
+        });
+        
+        // Select all products
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
         });
     </script>
 </body>
