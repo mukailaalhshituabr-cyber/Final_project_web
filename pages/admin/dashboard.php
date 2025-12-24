@@ -12,17 +12,36 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     exit();
 }
 
+$db = Database::getInstance();
 $userObj = new User();
 $orderObj = new Order();
 $productObj = new Product();
 
-// Stats with safe method checking
+// Stats using Database class methods
 $stats = [
-    'total_users' => method_exists($userObj, 'getTotalUsersCount') ? $userObj->getTotalUsersCount() : 0,
-    'total_orders' => method_exists($orderObj, 'getTotalOrdersCount') ? $orderObj->getTotalOrdersCount() : 0
+    'total_users' => $db->getTotalUsersCount(),
+    'total_customers' => $db->getTotalCustomersCount(),
+    'total_tailors' => $db->getTotalTailorsCount(),
+    'total_orders' => $orderObj->getTotalOrdersCount(),
+    'total_products' => $productObj->getTotalProductsCount(),
+    'total_revenue' => $db->getTotalRevenue(),
+    'pending_orders' => $db->getPendingOrdersCount(),
+    'new_users_week' => 0 // You can implement this
 ];
 
-$recentOrders = $orderObj->getRecentOrders($_SESSION['user_id'], 5);
+$recentUsers = $userObj->getRecentUsers(5);
+$recentOrders = $orderObj->getRecentOrders(5);
+$recentProducts = [];
+
+// Get recent products
+$db->query("
+    SELECT p.*, u.full_name as tailor_name 
+    FROM products p 
+    JOIN users u ON p.tailor_id = u.id 
+    ORDER BY p.created_at DESC 
+    LIMIT 5
+");
+$recentProducts = $db->resultSet();
 ?>
 <!DOCTYPE html>
 <html lang="en">

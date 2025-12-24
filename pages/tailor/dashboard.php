@@ -13,12 +13,60 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'tailor') {
 }
 
 $db = Database::getInstance();
-$order = new Order();
-$tailorId = $_SESSION['user_id'];
+$userObj = new User();
+$orderObj = new Order();
+$productObj = new Product();
 
-// Stats using methods from your existing Order class
-$totalOrders = $order->getTotalOrdersByTailor($tailorId);
-$recentOrders = $order->getRecentOrdersByTailor($tailorId, 5);
+$tailorId = $_SESSION['user_id'];
+$userData = $userObj->getUserById($tailorId);
+
+// Get stats
+$totalOrders = $orderObj->getTotalOrdersByTailor($tailorId);
+$recentOrders = $orderObj->getRecentOrdersByTailor($tailorId, 5);
+$recentProducts = $productObj->getProductsByTailor($tailorId, 10);
+$productsLowStock = $productObj->getLowStockProducts($tailorId);
+
+// Get revenue
+$db->query("SELECT SUM(total_amount) as revenue FROM orders WHERE tailor_id = :tailor_id AND payment_status = 'paid'");
+$db->bind(':tailor_id', $tailorId);
+$revenueResult = $db->single();
+$revenue = $revenueResult['revenue'] ?? 0;
+
+// Get today's orders
+$db->query("SELECT COUNT(*) as count FROM orders WHERE tailor_id = :tailor_id AND DATE(created_at) = CURDATE()");
+$db->bind(':tailor_id', $tailorId);
+$todayResult = $db->single();
+$todayOrders = $todayResult['count'] ?? 0;
+
+// Get pending orders
+$db->query("SELECT COUNT(*) as count FROM orders WHERE tailor_id = :tailor_id AND status = 'pending'");
+$db->bind(':tailor_id', $tailorId);
+$pendingResult = $db->single();
+$pendingOrders = $pendingResult['count'] ?? 0;
+
+// Get total products
+$db->query("SELECT COUNT(*) as count FROM products WHERE tailor_id = :tailor_id AND status = 'active'");
+$db->bind(':tailor_id', $tailorId);
+$productsResult = $db->single();
+$totalProducts = $productsResult['count'] ?? 0;
+
+// Get unread messages
+$db->query("SELECT COUNT(*) as count FROM messages WHERE receiver_id = :receiver_id AND is_read = 0");
+$db->bind(':receiver_id', $tailorId);
+$messagesResult = $db->single();
+$unreadMessages = $messagesResult['count'] ?? 0;
+
+// Get recent messages
+$db->query("
+    SELECT m.*, u.full_name as sender_name, u.profile_pic 
+    FROM messages m 
+    JOIN users u ON m.sender_id = u.id 
+    WHERE m.receiver_id = :receiver_id 
+    ORDER BY m.created_at DESC 
+    LIMIT 5
+");
+$db->bind(':receiver_id', $tailorId);
+$recentMessages = $db->resultSet();
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -1,5 +1,258 @@
 <?php
-require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/Database.php';
+
+class Product {
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
+
+    // Get total products count
+    public function getTotalProductsCount() {
+        $this->db->query("SELECT COUNT(*) as count FROM products WHERE status = 'active'");
+        $result = $this->db->single();
+        return $result['count'] ?? 0;
+    }
+
+    // Get products by tailor
+    public function getProductsByTailor($tailorId, $limit = null) {
+        $sql = "
+            SELECT p.*, u.full_name as tailor_name 
+            FROM products p 
+            JOIN users u ON p.tailor_id = u.id 
+            WHERE p.tailor_id = :tailor_id 
+            AND p.status = 'active'
+            ORDER BY p.created_at DESC
+        ";
+
+        if ($limit) {
+            $sql .= " LIMIT :limit";
+        }
+
+        $this->db->query($sql);
+        $this->db->bind(':tailor_id', $tailorId);
+        
+        if ($limit) {
+            $this->db->bind(':limit', $limit, PDO::PARAM_INT);
+        }
+
+        return $this->db->resultSet();
+    }
+
+    // Get featured products
+    public function getFeaturedProducts($limit = 8) {
+        $this->db->query("
+            SELECT p.*, u.full_name as tailor_name 
+            FROM products p 
+            JOIN users u ON p.tailor_id = u.id 
+            WHERE p.featured = 1 
+            AND p.status = 'active'
+            ORDER BY p.created_at DESC 
+            LIMIT :limit
+        ");
+        $this->db->bind(':limit', $limit, PDO::PARAM_INT);
+        return $this->db->resultSet();
+    }
+
+    // Get products by category
+    public function getProductsByCategory($category, $limit = 12) {
+        $this->db->query("
+            SELECT p.*, u.full_name as tailor_name 
+            FROM products p 
+            JOIN users u ON p.tailor_id = u.id 
+            WHERE (p.category = :category OR p.subcategory = :category)
+            AND p.status = 'active'
+            ORDER BY p.created_at DESC 
+            LIMIT :limit
+        ");
+        $this->db->bind(':category', $category);
+        $this->db->bind(':limit', $limit, PDO::PARAM_INT);
+        return $this->db->resultSet();
+    }
+
+    // Get product by ID
+    public function getProductById($id) {
+        $this->db->query("
+            SELECT p.*, u.full_name as tailor_name, u.profile_pic as tailor_avatar,
+                   u.bio as tailor_bio, u.experience as tailor_experience,
+                   u.specialization as tailor_specialization
+            FROM products p 
+            JOIN users u ON p.tailor_id = u.id 
+            WHERE p.id = :id
+        ");
+        $this->db->bind(':id', $id);
+        return $this->db->single();
+    }
+
+    // Search products
+    public function searchProducts($query, $limit = 20) {
+        $this->db->query("
+            SELECT p.*, u.full_name as tailor_name 
+            FROM products p 
+            JOIN users u ON p.tailor_id = u.id 
+            WHERE (p.title LIKE :query OR p.description LIKE :query OR p.tags LIKE :query)
+            AND p.status = 'active'
+            ORDER BY p.created_at DESC 
+            LIMIT :limit
+        ");
+        $this->db->bind(':query', "%$query%");
+        $this->db->bind(':limit', $limit, PDO::PARAM_INT);
+        return $this->db->resultSet();
+    }
+
+    // Create product
+    public function createProduct($data) {
+        try {
+            $this->db->beginTransaction();
+
+            // Generate slug from title
+            $slug = $this->generateSlug($data['title']);
+
+            $this->db->query("
+                INSERT INTO products (
+                    tailor_id, title, slug, description, price, compare_price, cost_price,
+                    sku, category, subcategory, material, size, color, brand, tags, images,
+                    specifications, is_customizable, customization_options, stock_quantity,
+                    low_stock_threshold, weight, dimensions, status, featured
+                ) VALUES (
+                    :tailor_id, :title, :slug, :description, :price, :compare_price, :cost_price,
+                    :sku, :category, :subcategory, :material, :size, :color, :brand, :tags, :images,
+                    :specifications, :is_customizable, :customization_options, :stock_quantity,
+                    :low_stock_threshold, :weight, :dimensions, :status, :featured
+                )
+            ");
+
+            $this->db->bind(':tailor_id', $data['tailor_id']);
+            $this->db->bind(':title', $data['title']);
+            $this->db->bind(':slug', $slug);
+            $this->db->bind(':description', $data['description'] ?? '');
+            $this->db->bind(':price', $data['price']);
+            $this->db->bind(':compare_price', $data['compare_price'] ?? null);
+            $this->db->bind(':cost_price', $data['cost_price'] ?? null);
+            $this->db->bind(':sku', $data['sku'] ?? '');
+            $this->db->bind(':category', $data['category'] ?? '');
+            $this->db->bind(':subcategory', $data['subcategory'] ?? '');
+            $this->db->bind(':material', $data['material'] ?? '');
+            $this->db->bind(':size', $data['size'] ?? null);
+            $this->db->bind(':color', $data['color'] ?? '');
+            $this->db->bind(':brand', $data['brand'] ?? '');
+            $this->db->bind(':tags', $data['tags'] ?? '[]');
+            $this->db->bind(':images', $data['images'] ?? '[]');
+            $this->db->bind(':specifications', $data['specifications'] ?? '{}');
+            $this->db->bind(':is_customizable', $data['is_customizable'] ?? 0);
+            $this->db->bind(':customization_options', $data['customization_options'] ?? '{}');
+            $this->db->bind(':stock_quantity', $data['stock_quantity'] ?? 1);
+            $this->db->bind(':low_stock_threshold', $data['low_stock_threshold'] ?? 5);
+            $this->db->bind(':weight', $data['weight'] ?? null);
+            $this->db->bind(':dimensions', $data['dimensions'] ?? '');
+            $this->db->bind(':status', $data['status'] ?? 'draft');
+            $this->db->bind(':featured', $data['featured'] ?? 0);
+
+            if ($this->db->execute()) {
+                $productId = $this->db->lastInsertId();
+                $this->db->commit();
+                return ['success' => true, 'product_id' => $productId];
+            }
+
+            $this->db->rollBack();
+            return ['success' => false, 'error' => 'Failed to create product'];
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    // Update product
+    public function updateProduct($productId, $data) {
+        $allowedFields = [
+            'title', 'description', 'price', 'compare_price', 'cost_price', 'sku',
+            'category', 'subcategory', 'material', 'size', 'color', 'brand', 'tags',
+            'images', 'specifications', 'is_customizable', 'customization_options',
+            'stock_quantity', 'low_stock_threshold', 'weight', 'dimensions',
+            'status', 'featured'
+        ];
+
+        $updates = [];
+        $bindings = [':product_id' => $productId];
+
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $updates[] = "$field = :$field";
+                $bindings[":$field"] = $data[$field];
+            }
+        }
+
+        if (empty($updates)) {
+            return ['success' => false, 'error' => 'No fields to update'];
+        }
+
+        $sql = "UPDATE products SET " . implode(', ', $updates) . ", updated_at = NOW() WHERE id = :product_id";
+        $this->db->query($sql);
+
+        foreach ($bindings as $key => $value) {
+            $this->db->bind($key, $value);
+        }
+
+        $success = $this->db->execute();
+        return ['success' => $success];
+    }
+
+    // Generate slug
+    private function generateSlug($title) {
+        $slug = strtolower(trim($title));
+        $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
+        $slug = preg_replace('/-+/', '-', $slug);
+        
+        // Check if slug exists
+        $counter = 1;
+        $originalSlug = $slug;
+        
+        while ($this->slugExists($slug)) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
+    }
+
+    // Check if slug exists
+    private function slugExists($slug) {
+        $this->db->query("SELECT id FROM products WHERE slug = :slug LIMIT 1");
+        $this->db->bind(':slug', $slug);
+        $this->db->execute();
+        return $this->db->rowCount() > 0;
+    }
+
+    // Get low stock products
+    public function getLowStockProducts($tailorId, $threshold = 5) {
+        $this->db->query("
+            SELECT * FROM products 
+            WHERE tailor_id = :tailor_id 
+            AND stock_quantity <= :threshold
+            AND status = 'active'
+            ORDER BY stock_quantity ASC
+            LIMIT 10
+        ");
+        $this->db->bind(':tailor_id', $tailorId);
+        $this->db->bind(':threshold', $threshold);
+        return $this->db->resultSet();
+    }
+
+    // Increment view count
+    public function incrementViewCount($productId) {
+        $this->db->query("UPDATE products SET view_count = view_count + 1 WHERE id = :product_id");
+        $this->db->bind(':product_id', $productId);
+        return $this->db->execute();
+    }
+}
+?>
+
+
+
+<?php
+/*require_once __DIR__ . '/../classes/Database.php';
 
 class Product {
     private $db;
@@ -327,3 +580,4 @@ class Product {
     }
 }
 ?>
+*/
