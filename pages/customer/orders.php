@@ -1,7 +1,8 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/Order.php';
+require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/Order.php';
+
 
 session_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {

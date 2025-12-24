@@ -1,8 +1,12 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/User.php';
-require_once '../../includes/classes/Product.php';
-require_once '../../includes/functions/product_functions.php';
+
+require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
+require_once ROOT_PATH . '/includes/classes/Order.php';
+require_once ROOT_PATH . '/includes/classes/Product.php';
+require_once ROOT_PATH . '/includes/functions/product_functions.php';
+
 
 // Check authentication and tailor role
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
