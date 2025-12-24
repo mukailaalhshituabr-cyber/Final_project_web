@@ -117,7 +117,7 @@ $clothingImages = [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSt43JRLaxscPrISLPxyiLXQyMNSSC2sa7Eg&s',
         'https://www.cartrollers.com/product/quality-islamic-fashion-jalabiya',
         'https://i.pinimg.com/736x/39/76/ae/3976aef31f9923d483b5dcac386fe75e.jpg',
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjN3tZOJ8lYuEi9UcJptDJafmMIPZ8z2R7zA&s',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCzWoUuRWxepK4rbM5fgbkIAPSYHInpv7pXA&s',
         'https://www.tradekey.com/product-free/Nigeria-Embroidery-Muslim-Clothing-9596758.html'
     ],
     'formal'=> [
