@@ -301,10 +301,10 @@ if ($currentCategory && !empty($categories)) {
                     <!-- Fallback categories -->
                     <?php 
                     $fallbackCategories = [
-                        ['slug' => 'traditional-wear', 'name' => 'Traditional Wear', 'image' => ''],
-                        ['slug' => 'modern-fashion', 'name' => 'Modern Fashion', 'image' => ''],
-                        ['slug' => 'formal', 'name' => 'Formal Wear', 'image' => ''],
-                        ['slug' => 'custom', 'name' => 'Custom Designs', 'image' => '']
+                        ['slug' => 'traditional-wear', 'name' => 'Traditional Wear'],
+                        ['slug' => 'modern-fashion', 'name' => 'Modern Fashion'],
+                        ['slug' => 'formal', 'name' => 'Formal Wear'],
+                        ['slug' => 'custom', 'name' => 'Custom Designs']
                     ];
                     ?>
                     <?php foreach ($fallbackCategories as $cat): ?>
