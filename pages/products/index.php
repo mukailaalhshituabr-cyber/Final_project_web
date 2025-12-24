@@ -37,7 +37,7 @@ $categories = [
 // Comprehensive sample products data
 $sampleProducts = [
     // Traditional Wear (8 items)
-    ['id' => 1, 'category' => 'traditional', 'title' => 'African Print Kaftan', 'price' => 89.99, 'Abdour-Raouf' => 'Aisha Designs', 'rating' => 4.8, 'description' => 'Beautiful hand-printed kaftan with traditional African patterns.'],
+    ['id' => 1, 'category' => 'traditional', 'title' => 'Djalabia', 'price' => 89.99, 'Abdour-Raouf' => 'Aisha Designs', 'rating' => 4.8, 'description' => 'Beautiful hand-printed kaftan with traditional African patterns.'],
     ['id' => 2, 'category' => 'traditional', 'title' => 'Indian Silk Saree', 'price' => 149.99, 'Moussa Hamani' => 'Bollywood Tailors', 'rating' => 4.9, 'description' => 'Premium silk saree with intricate embroidery and gold thread work.'],
     ['id' => 3, 'category' => 'traditional', 'title' => 'Japanese Kimono', 'price' => 199.99, 'Ibrahim Harounna' => 'Tokyo Crafts', 'rating' => 4.7, 'description' => 'Authentic Japanese kimono made from premium silk fabric.'],
     ['id' => 4, 'category' => 'traditional', 'title' => 'Chinese Cheongsam', 'price' => 129.99, 'Ila Soumeila' => 'Shanghai Silk', 'rating' => 4.6, 'description' => 'Elegant cheongsam dress with traditional Chinese embroidery.'],
@@ -105,10 +105,10 @@ $sampleProducts = [
 $clothingImages = [
     'traditional' => [
         'https://tse4.mm.bing.net/th/id/OIP.n83ZJZpGe48lnhNHGCqAXgHaJT?rs=1&pid=ImgDetMain&o=7&rm=3',
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1525459819821-1bb0b2b60d8e?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1577219491237-45c96647e15e?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1574201635302-388dd92c4d3a?w=400&h=500&fit=crop'
+        'https://th.bing.com/th/id/OIP.U5awbI4cQTQGtz6Z6J16pAHaHa?w=201&h=201&c=7&r=0&o=7&dpr=2.6&pid=1.7&rm=3',
+        'https://th.bing.com/th?q=Traditional+Muslim+Clothing+for+Women&w=120&h=120&c=1&rs=1&qlt=70&o=7&cb=1&dpr=2.6&pid=InlineBlock&rm=3&mkt=en-WW&cc=GH&setlang=en&adlt=moderate&t=1&mw=247',
+        'https://villagegreennj.com/wp-content/uploads/2021/01/IMG_0532-scaled.jpg',
+        'https://th.bing.com/th/id/OIP.QwWWJ0_m081_h0EfnKtnRwHaLy?w=119&h=189&c=7&r=0&o=7&dpr=2.6&pid=1.7&rm=3'
     ],
     'modern' => [
         'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=500&fit=crop',
