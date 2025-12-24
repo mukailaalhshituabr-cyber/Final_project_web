@@ -130,9 +130,9 @@ $clothingImages = [
     'custom' => [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4DA8F2FRQJ-KIxZEtIvU2yWehgPtM5KVH4w&s',
         'https://i.etsystatic.com/24512336/r/il/35f8b3/2450679742/il_570xN.2450679742_gkc1.jpg',
-        'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=500&fit=crop'
+        'https://i.pinimg.com/736x/d4/1d/09/d41d093e1de4ef460e1cd0a1f5433f5c.jpg',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2QYYUNcdqnvw-UZ60tLDSjiHIVSa6u0MDjg&s',
+        'https://i.etsystatic.com/18339637/r/il/cd0db0/5547987457/il_570xN.5547987457_1vs0.jpg'
     ],
     'wedding' => [
         'https://i.pinimg.com/736x/6c/00/af/6c00af45b0b1e933badc4eb22408659b.jpg',
