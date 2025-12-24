@@ -7,35 +7,44 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// 1. Check if already logged in - Redirect to their specific dashboard
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_type'])) {
+    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
+}
+
+$error = '';
+
+// 2. Handle the Login Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $selectedRole = $_POST['user_type'] ?? 'customer'; // What the user clicked on the UI
+    $selectedType = $_POST['user_type'] ?? 'customer'; // Role chosen on the UI
 
     $db = new Database();
     $conn = $db->getConnection();
 
+    // Fetch user by email
     $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
+        // Normalize the role from the database to lowercase to match folder names
+        $dbRole = strtolower($user['user_type']);
         
-        // IMPORTANT: We use the user_type FROM THE DATABASE, not the form
-        $actualRole = strtolower($user['user_type']); 
-        
-        // Validation: Ensure they aren't trying to log into the wrong portal
-        if ($actualRole !== strtolower($selectedRole)) {
-            $error = "This account is a " . ucfirst($actualRole) . " account, not a " . ucfirst($selectedRole) . " account.";
+        // 3. Validation: Does the selected role match the database?
+        if ($dbRole !== strtolower($selectedType)) {
+            $error = "This account is registered as a " . ucfirst($dbRole) . ". Please select the correct login type.";
         } else {
-            // LOGIN SUCCESS
-            $_SESSION['user_id'] = $user['id']; // This is your auto-generated ID from DB
-            $_SESSION['user_type'] = $actualRole;
+            // SUCCESS: Set Session data using Database values
+            $_SESSION['user_id'] = $user['id']; 
+            $_SESSION['user_type'] = $dbRole; 
             $_SESSION['username'] = $user['username'];
+            $_SESSION['full_name'] = $user['full_name'];
 
-            // Force a clean path to the dashboard
-            $redirectPath = "../" . $actualRole . "/dashboard.php";
-            header("Location: " . $redirectPath);
+            // 4. Redirect to: ../customer/dashboard.php OR ../tailor/dashboard.php OR ../admin/dashboard.php
+            header("Location: ../" . $dbRole . "/dashboard.php");
             exit();
         }
     } else {
@@ -79,7 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .user-type-btn.active[data-type="customer"] { background-color: #0d6efd; color: white; border-color: #0d6efd; }
         .user-type-btn.active[data-type="tailor"] { background-color: #212529; color: white; border-color: #212529; }
         .user-type-btn.active[data-type="admin"] { background-color: #dc3545; color: white; border-color: #dc3545; }
-        
         .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25); }
     </style>
 </head>
@@ -160,14 +168,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const passwordField = document.getElementById('passwordField');
     const toggleBtn = document.getElementById('togglePassword');
 
-    // Switch Role Logic
     userTypeBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const type = this.dataset.type;
-            
             userTypeBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             
+            // This is the critical part for the PHP logic
             loginUserType.value = type;
             
             if (type === 'admin') {
@@ -189,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Toggle Password Visibility
     toggleBtn.addEventListener('click', function() {
         const type = passwordField.type === 'password' ? 'text' : 'password';
         passwordField.type = type;
@@ -198,10 +204,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 </body>
 </html>
-
 
 
 <?php
