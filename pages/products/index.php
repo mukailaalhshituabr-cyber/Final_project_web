@@ -142,11 +142,11 @@ $clothingImages = [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuUfVQH26iAPfGiohpUPM9FA9R2BE_dHvGig&s'
     ],
     'casual' => [
-        'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1505022610485-0249ba5b3675?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1558769132-cb1a40ed0ada?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1544441893-675973e31985?w=400&h=500&fit=crop'
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR706WGKqFUc3xuc5prIczMrCRRKOg6uyVHOQ&s',
+        'https://img4.dhresource.com/webp/m/0x0/f3/albu/km/l/24/cb6cdc49-c4db-4eb7-ab4a-39864aab289c.jpg',
+        'https://pictures-ghana.jijistatic.net/55589937_NjIwLTExMDAtYzk5NjcwN2UxZQ.webp',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNgU4HLxXfNvPIpyfkW3NRMcs-LZYBw1EVBw&s',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgG1GajKBVl7S7GZtjbSV-mjjhtq6JYUJNQw&s'
     ],
     'accessories' => [
         'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=500&fit=crop',
