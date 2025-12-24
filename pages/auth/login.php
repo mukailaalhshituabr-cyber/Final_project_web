@@ -15,32 +15,30 @@ if (isset($_SESSION['user_id'])) {
 $error = '';
 $success = isset($_GET['success']) ? 'Registration successful! Please login.' : '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $selectedType = $_POST['user_type'] ?? ''; 
-
-    $user = new User();
-    $userData = $user->login($email, $password);
-    
-    if ($userData) {
-        if ($userData['user_type'] !== $selectedType) {
-            $error = "This account is not registered as a " . htmlspecialchars($selectedType);
-        } else {
-            session_regenerate_id(true); 
-            $_SESSION['user_id'] = $userData['id'];
-            $_SESSION['user_type'] = $userData['user_type'];
-            $_SESSION['full_name'] = $userData['full_name'];
-
-            // DIRECTORY FIX: Ensure your folders are /admin/, /customer/, /tailor/
-            header('Location: ../' . $userData['user_type'] . '/dashboard.php');
-            exit();
-        }
+if (password_verify($password, $user['password'])) {
+    // Check if the type they selected matches their account
+    if ($user['user_type'] !== $userType) {
+        $error = "This account is not registered as a " . htmlspecialchars($userType);
     } else {
-        $error = 'Invalid email or password';
+        // Correct login! Set sessions
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_type'] = $user['user_type'];
+
+        // Redirect based on type
+        if ($user['user_type'] === 'admin') {
+            header("Location: ../admin/dashboard.php");
+        } elseif ($user['user_type'] === 'tailor') {
+            header("Location: ../tailor/dashboard.php");
+        } else {
+            header("Location: ../customer/dashboard.php");
+        }
+        exit();
     }
 }
 ?>
+<div class="user-type-selector d-flex gap-2 mb-4">
+<form method="POST" action="" id="loginForm">
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,9 +123,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php endif; ?>
 
                                 <div class="user-type-selector d-flex gap-2 mb-4">
-                                    <button type="button" class="btn user-type-btn active" data-type="customer"><i class="bi bi-person me-1"></i>Customer</button>
-                                    <button type="button" class="btn user-type-btn" data-type="t"><i class="bi bi-scissors me-1"></i>T</button>
-                                    <button type="button" class="btn user-type-btn" data-type="admin"><i class="bi bi-shield-lock me-1"></i>Admin</button>
+                                    <button type="button" class="btn user-type-btn active" data-type="customer">
+                                        <i class="bi bi-person me-1"></i>Customer
+                                    </button>
+                                    <button type="button" class="btn user-type-btn" data-type="tailor">
+                                        <i class="bi bi-scissors me-1"></i>Tailor
+                                    </button>
+                                    <button type="button" class="btn user-type-btn" data-type="admin">
+                                        <i class="bi bi-shield-lock me-1"></i>Admin
+                                    </button>
                                 </div>
 
                                 <form method="POST" action="" id="loginForm">
@@ -142,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                                             <input type="email" class="form-control" name="email" required 
-                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                                                value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                                         </div>
                                     </div>
 

@@ -42,8 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $result;
         }
     }
-}
+}t
 ?>
+<div class="mb-4">
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -204,26 +205,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <label class="form-label fw-bold mb-3">I want to join as:</label>
                                         <div class="row g-3">
                                             <div class="col-6">
-                                                <div class="user-type-card <?php echo $userType == 'customer' ? 'selected' : ''; ?>" 
-                                                     onclick="selectUserType('customer')">
+                                                <div class="user-type-card <?php echo ($userType == 'customer') ? 'selected' : ''; ?>" 
+                                                    onclick="selectUserType('customer')">
                                                     <i class="bi bi-person display-6 text-primary mb-3"></i>
                                                     <h6 class="fw-bold mb-2">Customer</h6>
                                                     <p class="small text-muted">Buy custom clothing</p>
                                                     <input type="radio" name="user_type" value="customer" 
-                                                           <?php echo $userType == 'customer' ? 'checked' : ''; ?> hidden>
+                                                        <?php echo ($userType == 'customer') ? 'checked' : ''; ?> hidden>
                                                 </div>
                                             </div>
                                             <div class="col-6">
-                                                <div class="user-type-card <?php echo $userType == 'tailor' ? 'selected' : ''; ?>" 
-                                                     onclick="selectUserType('tailor')">
+                                                <div class="user-type-card <?php echo ($userType == 'tailor') ? 'selected' : ''; ?>" 
+                                                    onclick="selectUserType('tailor')">
                                                     <i class="bi bi-scissors display-6 text-primary mb-3"></i>
                                                     <h6 class="fw-bold mb-2">Tailor</h6>
                                                     <p class="small text-muted">Sell your designs</p>
                                                     <input type="radio" name="user_type" value="tailor" 
-                                                           <?php echo $userType == 'tailor' ? 'checked' : ''; ?> hidden>
+                                                        <?php echo ($userType == 'tailor') ? 'checked' : ''; ?> hidden>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div id="tailorBioSection" class="mb-3" style="<?php echo ($userType == 'tailor') ? '' : 'display: none;' ?>">
+                                        <label class="form-label">Bio / Introduction</label>
+                                        <textarea class="form-control" name="bio" rows="3" 
+                                                placeholder="Tell us about your tailoring experience..."><?php echo htmlspecialchars($_POST['bio'] ?? ''); ?></textarea>
                                     </div>
                                     
                                     <!-- Basic Information -->
