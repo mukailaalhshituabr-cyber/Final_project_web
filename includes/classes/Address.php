@@ -1,5 +1,3 @@
-Address.php (Remains the same - well structured)
-php
 <?php
 class Address {
     private $db;

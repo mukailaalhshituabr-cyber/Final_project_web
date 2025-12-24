@@ -1,6 +1,3 @@
-
-FIXED sidebar.php (working with your DB):
-php
 <?php
 // Ensure user is authenticated
 if (!isset($_SESSION['user_id'])) {

@@ -1,5 +1,3 @@
-pages/tailor/analytics.php:
-php
 <?php
 require_once '../../config.php';
 require_once '../../includes/classes/Database.php';

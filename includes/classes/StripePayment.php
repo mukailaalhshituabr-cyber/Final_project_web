@@ -1,5 +1,3 @@
-StripePayment.php (Renamed from Shipepayment.php with correct spelling)
-php
 <?php
 class StripePayment {
     private $stripe;
