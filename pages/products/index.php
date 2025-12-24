@@ -149,8 +149,8 @@ $clothingImages = [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgG1GajKBVl7S7GZtjbSV-mjjhtq6JYUJNQw&s'
     ],
     'accessories' => [
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJoz3OcTm4A7dQvhaP6y92jcVA_d6ZcH1bWw&s',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRSKTRj8loQ4V3S2ebl80hXAR_96gXf-IPuw&s',
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzgjHv4pI_245wt4uBrdyYiwgpad5ErhIU0w&s',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKauWrUI_oCsUUfvxCKIUlML6NXvMrvhFFQg&s',
         'https://i.etsystatic.com/19372276/r/il/2b94b0/3228169541/il_570xN.3228169541_ovag.jpg',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9U2-Fw2NM9yKJksk7N6yMHa_oRoHHElV6dA&s'
