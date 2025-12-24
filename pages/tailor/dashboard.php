@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
 }
 
 
-require_once '../../config.php';
+require_once 'config.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/User.php';
 require_once '../../includes/classes/Order.php';
