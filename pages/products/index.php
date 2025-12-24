@@ -104,7 +104,7 @@ $sampleProducts = [
 // Clothing images for each category
 $clothingImages = [
     'traditional' => [
-        'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=500&fit=crop',
+        'https://tse4.mm.bing.net/th/id/OIP.n83ZJZpGe48lnhNHGCqAXgHaJT?rs=1&pid=ImgDetMain&o=7&rm=3',
         'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=500&fit=crop',
         'https://images.unsplash.com/photo-1525459819821-1bb0b2b60d8e?w=400&h=500&fit=crop',
         'https://images.unsplash.com/photo-1577219491237-45c96647e15e?w=400&h=500&fit=crop',
