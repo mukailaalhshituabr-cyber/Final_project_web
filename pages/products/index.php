@@ -156,11 +156,11 @@ $clothingImages = [
         'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=500&fit=crop'
     ],
     'kids' => [
-        'https://images.unsplash.com/photo-1561489409-e420d0f26b43?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1558769132-92e717d613cd?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400&h=500&fit=crop'
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThQ-MnyxlnAcX7cIRQM5MmtpMpl-BThIG_BA&s',
+        'https://i.etsystatic.com/25411016/r/il/12b16d/5693229335/il_570xN.5693229335_5pij.jpg',
+        'https://i.etsystatic.com/50093480/r/il/d35108/6998100785/il_fullxfull.6998100785_71a6.jpg',
+        'https://i.pinimg.com/236x/18/de/c7/18dec7fa9b5af77dfcd01c17538a86ae.jpg',
+        'https://i.pinimg.com/736x/53/0f/9e/530f9e0e47f2233e22fbb8676aa5c2ae.jpg'
     ]
 ];
 
