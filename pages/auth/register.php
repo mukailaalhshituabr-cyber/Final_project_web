@@ -1,5 +1,4 @@
 <?php
-
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/User.php';
@@ -8,39 +7,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Redirect if already logged in
-if (isset($_SESSION['user_id'])) {
-    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
-    exit();
-}
-
 $error = '';
-$success = '';
-
-// Initialize userType for the UI
 $userType = $_POST['user_type'] ?? 'customer';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
-        'username' => trim($_POST['username'] ?? ''),
-        'email' => trim($_POST['email'] ?? ''),
-        'password' => $_POST['password'] ?? '',
+        'username'  => trim($_POST['username'] ?? ''),
+        'email'     => trim($_POST['email'] ?? ''),
+        'password'  => $_POST['password'] ?? '',
         'confirm_password' => $_POST['confirm_password'] ?? '',
         'full_name' => trim($_POST['full_name'] ?? ''),
-        'user_type' => $_POST['user_type'] ?? 'customer', // Fixed: matches 'tailor' or 'customer'
-        'phone' => trim($_POST['phone'] ?? ''),
-        'address' => trim($_POST['address'] ?? ''),
-        'bio' => trim($_POST['bio'] ?? '')
+        'user_type' => $_POST['user_type'] ?? 'customer',
+        'phone'     => trim($_POST['phone'] ?? ''),
+        'address'   => trim($_POST['address'] ?? ''),
+        'bio'       => trim($_POST['bio'] ?? '')
     ];
     
-    // Validation Logic
     if ($data['password'] !== $data['confirm_password']) {
         $error = 'Passwords do not match';
-    } elseif (strlen($data['password']) < 6) {
-        $error = 'Password must be at least 6 characters';
     } else {
         $user = new User();
-        $result = $user->register($data);
+        $result = $user->register($data); 
+        // Note: Your User class should return the NEW AUTO-GENERATED ID on success
         if (is_numeric($result)) {
             header('Location: login.php?success=1');
             exit();

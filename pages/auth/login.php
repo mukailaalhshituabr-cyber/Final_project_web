@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/User.php';
@@ -10,38 +7,35 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Redirect if already logged in
-if (isset($_SESSION['user_id'])) {
-    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
-    exit();
-}
-
-$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $userType = $_POST['user_type'] ?? 'customer';
+    $selectedRole = $_POST['user_type'] ?? 'customer'; // What the user clicked on the UI
 
     $db = new Database();
     $conn = $db->getConnection();
 
-    // Fetch user by email
     $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
-        // Validation: Does the chosen login type match the database role?
-        if ($user['user_type'] !== $userType) {
-            $error = "This account is not registered as a " . ucfirst($userType);
+        
+        // IMPORTANT: We use the user_type FROM THE DATABASE, not the form
+        $actualRole = strtolower($user['user_type']); 
+        
+        // Validation: Ensure they aren't trying to log into the wrong portal
+        if ($actualRole !== strtolower($selectedRole)) {
+            $error = "This account is a " . ucfirst($actualRole) . " account, not a " . ucfirst($selectedRole) . " account.";
         } else {
-            // Success! Set sessions
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_type'] = $user['user_type'];
+            // LOGIN SUCCESS
+            $_SESSION['user_id'] = $user['id']; // This is your auto-generated ID from DB
+            $_SESSION['user_type'] = $actualRole;
             $_SESSION['username'] = $user['username'];
 
-            // Redirect based on role
-            header("Location: ../" . $user['user_type'] . "/dashboard.php");
+            // Force a clean path to the dashboard
+            $redirectPath = "../" . $actualRole . "/dashboard.php";
+            header("Location: " . $redirectPath);
             exit();
         }
     } else {
