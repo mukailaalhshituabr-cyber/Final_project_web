@@ -37,14 +37,14 @@ $categories = [
 // Comprehensive sample products data
 $sampleProducts = [
     // Traditional Wear (8 items)
-    ['id' => 1, 'category' => 'traditional', 'title' => 'African Print Kaftan', 'price' => 89.99, 'tailor_name' => 'Aisha Designs', 'rating' => 4.8, 'description' => 'Beautiful hand-printed kaftan with traditional African patterns.'],
-    ['id' => 2, 'category' => 'traditional', 'title' => 'Indian Silk Saree', 'price' => 149.99, 'tailor_name' => 'Bollywood Tailors', 'rating' => 4.9, 'description' => 'Premium silk saree with intricate embroidery and gold thread work.'],
-    ['id' => 3, 'category' => 'traditional', 'title' => 'Japanese Kimono', 'price' => 199.99, 'tailor_name' => 'Tokyo Crafts', 'rating' => 4.7, 'description' => 'Authentic Japanese kimono made from premium silk fabric.'],
-    ['id' => 4, 'category' => 'traditional', 'title' => 'Chinese Cheongsam', 'price' => 129.99, 'tailor_name' => 'Shanghai Silk', 'rating' => 4.6, 'description' => 'Elegant cheongsam dress with traditional Chinese embroidery.'],
-    ['id' => 5, 'category' => 'traditional', 'title' => 'Arab Thobe', 'price' => 79.99, 'tailor_name' => 'Desert Tailors', 'rating' => 4.5, 'description' => 'Traditional Arab thobe made from lightweight cotton fabric.'],
-    ['id' => 6, 'category' => 'traditional', 'title' => 'Korean Hanbok', 'price' => 169.99, 'tailor_name' => 'Seoul Fashion', 'rating' => 4.8, 'description' => 'Colorful Korean hanbok with vibrant colors and patterns.'],
-    ['id' => 7, 'category' => 'traditional', 'title' => 'Scottish Kilt', 'price' => 189.99, 'tailor_name' => 'Highland Crafts', 'rating' => 4.7, 'description' => 'Authentic Scottish kilt with clan tartan pattern.'],
-    ['id' => 8, 'category' => 'traditional', 'title' => 'Mexican Poncho', 'price' => 59.99, 'tailor_name' => 'Aztec Designs', 'rating' => 4.4, 'description' => 'Warm Mexican poncho with traditional geometric patterns.'],
+    ['id' => 1, 'category' => 'traditional', 'title' => 'African Print Kaftan', 'price' => 89.99, 'Abdour-Raouf' => 'Aisha Designs', 'rating' => 4.8, 'description' => 'Beautiful hand-printed kaftan with traditional African patterns.'],
+    ['id' => 2, 'category' => 'traditional', 'title' => 'Indian Silk Saree', 'price' => 149.99, 'Moussa Hamani' => 'Bollywood Tailors', 'rating' => 4.9, 'description' => 'Premium silk saree with intricate embroidery and gold thread work.'],
+    ['id' => 3, 'category' => 'traditional', 'title' => 'Japanese Kimono', 'price' => 199.99, 'Ibrahim Harounna' => 'Tokyo Crafts', 'rating' => 4.7, 'description' => 'Authentic Japanese kimono made from premium silk fabric.'],
+    ['id' => 4, 'category' => 'traditional', 'title' => 'Chinese Cheongsam', 'price' => 129.99, 'Ila Soumeila' => 'Shanghai Silk', 'rating' => 4.6, 'description' => 'Elegant cheongsam dress with traditional Chinese embroidery.'],
+    ['id' => 5, 'category' => 'traditional', 'title' => 'Arab Thobe', 'price' => 79.99, 'Tanimou Hamma' => 'Desert Tailors', 'rating' => 4.5, 'description' => 'Traditional Arab thobe made from lightweight cotton fabric.'],
+    ['id' => 6, 'category' => 'traditional', 'title' => 'Korean Hanbok', 'price' => 169.99, 'Sara Halidou' => 'Seoul Fashion', 'rating' => 4.8, 'description' => 'Colorful Korean hanbok with vibrant colors and patterns.'],
+    ['id' => 7, 'category' => 'traditional', 'title' => 'Scottish Kilt', 'price' => 189.99, 'Faouma Amani' => 'Highland Crafts', 'rating' => 4.7, 'description' => 'Authentic Scottish kilt with clan tartan pattern.'],
+    ['id' => 8, 'category' => 'traditional', 'title' => 'Mexican Poncho', 'price' => 59.99, 'Zahara Sani' => 'Aztec Designs', 'rating' => 4.4, 'description' => 'Warm Mexican poncho with traditional geometric patterns.'],
     
     // Modern Fashion (7 items)
     ['id' => 9, 'category' => 'modern', 'title' => 'Designer Blazer', 'price' => 129.99, 'tailor_name' => 'Urban Stitch', 'rating' => 4.6, 'description' => 'Modern tailored blazer for business meetings.'],
@@ -104,9 +104,9 @@ $sampleProducts = [
 // Clothing images for each category
 $clothingImages = [
     'traditional' => [
-        'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1525459819821-1bb0b2b60d8e?w=400&h=500&fit=crop',
+        'assets/images/products/image1.jpeg',
+        'assets/images/products/image2.jpeg',
+        'assets/images/products/image3.jpeg',
         'https://images.unsplash.com/photo-1577219491237-45c96647e15e?w=400&h=500&fit=crop',
         'https://images.unsplash.com/photo-1574201635302-388dd92c4d3a?w=400&h=500&fit=crop'
     ],
