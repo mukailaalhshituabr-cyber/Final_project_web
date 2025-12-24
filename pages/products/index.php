@@ -129,7 +129,7 @@ $clothingImages = [
     ],
     'custom' => [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4DA8F2FRQJ-KIxZEtIvU2yWehgPtM5KVH4w&s',
-        'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=500&fit=crop',
+        'https://i.etsystatic.com/24512336/r/il/35f8b3/2450679742/il_570xN.2450679742_gkc1.jpg',
         'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=500&fit=crop',
         'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=500&fit=crop',
         'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=500&fit=crop'
@@ -137,9 +137,9 @@ $clothingImages = [
     'wedding' => [
         'https://i.pinimg.com/736x/6c/00/af/6c00af45b0b1e933badc4eb22408659b.jpg',
         'https://m.media-amazon.com/images/I/61hNb+XIfDL._AC_UY1000_.jpg',
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4aGney0c6X3qtUeUlUJoDpNWGenTY9U-4Pw&s',
-        'https://images.unsplash.com/photo-1661332306744-70f9ed1a7f40?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8bmlnZXJpYW4lMjB3ZWRkaW5nfGVufDB8fDB8fHww',
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuUfVQH26iAPfGiohpUPM9FA9R2BE_dHvGig&s'
+        'https://d17a17kld06uk8.cloudfront.net/products/X86BY2I/ZA6QXPH7-original.jpg',
+        'https://s.alicdn.com/@sc04/kf/H231f9a12d3bc44c0863f50c048df226eh.jpg_300x300.jpg',
+        'https://i.etsystatic.com/18339637/r/il/cd0db0/5547987457/il_570xN.5547987457_1vs0.jpg'
     ],
     'casual' => [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR706WGKqFUc3xuc5prIczMrCRRKOg6uyVHOQ&s',
