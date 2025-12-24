@@ -153,7 +153,7 @@ $clothingImages = [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzgjHv4pI_245wt4uBrdyYiwgpad5ErhIU0w&s',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKauWrUI_oCsUUfvxCKIUlML6NXvMrvhFFQg&s',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRSKTRj8loQ4V3S2ebl80hXAR_96gXf-IPuw&s',
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9U2-Fw2NM9yKJksk7N6yMHa_oRoHHElV6dA&s'
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfsUI2cgq6FzxO_X2UjtJG8KFX-6nyxxh71A&s'
     ],
     'kids' => [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThQ-MnyxlnAcX7cIRQM5MmtpMpl-BThIG_BA&s',
