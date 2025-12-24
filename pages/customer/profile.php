@@ -276,12 +276,13 @@ try {
         }
         
         .card {
+            background: 100%;
             border: none;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 1.5rem;
         }
-        
+
         .measurement-input {
             position: relative;
         }
