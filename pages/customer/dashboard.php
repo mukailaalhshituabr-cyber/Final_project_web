@@ -45,7 +45,7 @@ $totalOrders = $db->single()['count'] ?? 0;
             --light: #f8fafc;
             --dark: #1e293b;
         }
-        
+ edit       
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f5f7fa;
@@ -369,6 +369,9 @@ $totalOrders = $db->single()['count'] ?? 0;
                         <h5 class="user-name"><?php echo htmlspecialchars($userData['full_name']); ?></h5>
                         <div class="user-role">Customer</div>
                         <a href="profile.php" class="btn btn-sm btn-outline-primary">Edit Profile</a>
+                        <a href="<?php echo SITE_URL; ?>/pages/auth/logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
                     </div>
                     
                     <!-- Navigation -->
