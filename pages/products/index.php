@@ -111,11 +111,14 @@ $clothingImages = [
         'https://th.bing.com/th/id/OIP.QwWWJ0_m081_h0EfnKtnRwHaLy?w=119&h=189&c=7&r=0&o=7&dpr=2.6&pid=1.7&rm=3'
     ],
     'modern' => [
-        'https://guardian.ng/saturday-magazine/put-your-best-fashion-foot-forward-this-eid/',
+        'https://guardian.ng/saturday-magazine/put-your-best-fashion-foot-forward-this-eid',
         'https://www.shutterstock.com/search/african-muslim-wear?page=2',
         'https://www.centromedicoloira.com/?s=4824701001430',
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSt43JRLaxscPrISLPxyiLXQyMNSSC2sa7Eg&s',
-        'https://www.cartrollers.com/product/quality-islamic-fashion-jalabiya/'
+        'https://www.cartrollers.com/product/quality-islamic-fashion-jalabiya',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOV7ME7WdtvMGax5Mmzf_mwrViJg4FyKPwLg&s',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjN3tZOJ8lYuEi9UcJptDJafmMIPZ8z2R7zA&s',
+        'https://www.tradekey.com/product-free/Nigeria-Embroidery-Muslim-Clothing-9596758.html'
     ],
     'formal'=> [
         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNA-BrhdLtyPMog2YDzb0q7dw2WYSNM9-gEA&s',
