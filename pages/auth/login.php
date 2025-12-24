@@ -14,6 +14,8 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['user_type'])) {
     exit();
 }
 
+
+
 $error = '';
 $success = isset($_GET['success']) ? 'Registration successful! Please login.' : '';
 
@@ -50,6 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Redirect based on the DB type
                 header('Location: ../../pages/' . $userData['user_type'] . '/dashboard.php');
                 exit();
+
+                // Updated redirect logic
+                $redirectPath = "../../pages/" . $userData['user_type'] . "/dashboard.php";
+                header('Location: ' . $redirectPath);
             }
         } else {
             $error = 'Invalid email or password';
