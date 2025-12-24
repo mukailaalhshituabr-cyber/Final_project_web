@@ -189,6 +189,7 @@ class Order {
         ");
         $this->db->bind(':tailor_id', $tailorId);
         return $this->db->resultSet();
+        //done
     }
 }
 ?>

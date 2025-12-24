@@ -1,5 +1,6 @@
 <?php
-require_once 'config.php'; 
+//done
+// require_once 'config.php'; 
 require_once 'includes/classes/Database.php';
 
 $db = Database::getInstance();

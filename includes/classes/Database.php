@@ -422,6 +422,7 @@ class Database {
         $this->query("SELECT SUM(total_amount) as total FROM orders WHERE payment_status = 'paid'");
         $result = $this->single();
         return $result['total'] ?? 0;
+        //done
     }
 }
 ?>

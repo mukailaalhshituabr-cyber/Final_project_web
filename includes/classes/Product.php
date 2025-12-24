@@ -245,6 +245,7 @@ class Product {
         $this->db->query("UPDATE products SET view_count = view_count + 1 WHERE id = :product_id");
         $this->db->bind(':product_id', $productId);
         return $this->db->execute();
+        //done
     }
 }
 ?>

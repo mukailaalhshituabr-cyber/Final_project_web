@@ -318,6 +318,7 @@ class User {
         if ($limit) {
             $this->db->bind(':limit', $limit, PDO::PARAM_INT);
         }
+        //done
         
         return $this->db->resultSet();
     }
