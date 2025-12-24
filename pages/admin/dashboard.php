@@ -1,68 +1,28 @@
 <?php
 require_once dirname(__DIR__, 2) . '/config.php';
-
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/User.php';
 require_once ROOT_PATH . '/includes/classes/Order.php';
 require_once ROOT_PATH . '/includes/classes/Product.php';
 
-session_start();
-// Enhanced security check
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin') {
-    header('Location: ../../pages/auth/login.php');
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
+    header('Location: ../auth/login.php');
     exit();
 }
 
-$db = Database::getInstance();
 $userObj = new User();
 $orderObj = new Order();
 $productObj = new Product();
 
-// 1. Get statistics the system can actually provide
-// Note: The following methods need to be added to your User, Order, and Product classes.
-// I'm using placeholder values to prevent errors. You must implement these methods.
+// Stats with safe method checking
 $stats = [
     'total_users' => method_exists($userObj, 'getTotalUsersCount') ? $userObj->getTotalUsersCount() : 0,
-    'total_tailors' => method_exists($userObj, 'getTailorsCount') ? $userObj->getTailorsCount() : 0,
-    'total_customers' => method_exists($userObj, 'getCustomersCount') ? $userObj->getCustomersCount() : 0,
-    'total_products' => method_exists($productObj, 'getTotalProductsCount') ? $productObj->getTotalProductsCount() : 0,
-    'total_orders' => method_exists($orderObj, 'getTotalOrdersCount') ? $orderObj->getTotalOrdersCount() : 0,
-    'pending_orders' => 0, // Placeholder - needs a method like getPendingOrdersCount()
-    'total_revenue' => 0,  // Placeholder - needs a method like getTotalRevenue()
-    'new_users_week' => method_exists($userObj, 'getNewUsersThisWeek') ? $userObj->getNewUsersThisWeek() : 0
+    'total_orders' => method_exists($orderObj, 'getTotalOrdersCount') ? $orderObj->getTotalOrdersCount() : 0
 ];
 
-// 2. Get recent data using methods from the classes you provided
-$recentOrders = $orderObj->getRecentOrders($_SESSION['user_id'], 5); // Uses existing method
-$recentUsers = method_exists($userObj, 'getRecentUsers') ? $userObj->getRecentUsers(5) : [];
-$recentProducts = method_exists($productObj, 'getRecentProducts') ? $productObj->getRecentProducts(5) : [];
-
-
-// create_admin.php - Run once then delete
-require_once 'config.php';
-require_once 'includes/classes/Database.php';
-
-$db = Database::getInstance();
-$password = password_hash('Admin123!', PASSWORD_DEFAULT);
-
-$db->query("INSERT INTO users (username, email, password, full_name, user_type, created_at) 
-           VALUES (:username, :email, :password, :full_name, :user_type, NOW())");
-
-$db->bind(':username', 'admin');
-$db->bind(':email', 'admin@' . strtolower(SITE_NAME) . '.com');
-$db->bind(':password', $password);
-$db->bind(':full_name', 'Administrator');
-$db->bind(':user_type', 'admin');
-
-if ($db->execute()) {
-    echo "Admin user created successfully!<br>";
-    echo "Username: admin<br>";
-    echo "Password: Admin123!<br>";
-    echo "IMPORTANT: Delete this file after use!";
-} else {
-    echo "Failed to create admin user";
-}
-
+$recentOrders = $orderObj->getRecentOrders($_SESSION['user_id'], 5);
 ?>
 <!DOCTYPE html>
 <html lang="en">

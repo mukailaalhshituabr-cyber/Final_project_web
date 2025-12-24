@@ -1,145 +1,24 @@
 <?php
-
-
 require_once dirname(__DIR__, 2) . '/config.php';
-
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/User.php';
 require_once ROOT_PATH . '/includes/classes/Order.php';
 require_once ROOT_PATH . '/includes/classes/Product.php';
 
-// pages/tailor/products.php (basic)
-session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'tailor') {
-    header('Location: ../../pages/auth/login.php');
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'tailor') {
+    header('Location: ../auth/login.php');
     exit();
 }
 
-
-
-
-
 $db = Database::getInstance();
-$user = new User();
 $order = new Order();
-$product = new Product();
-
 $tailorId = $_SESSION['user_id'];
 
-// Get user data
-$userData = $user->getUserById($tailorId);
-if (!$userData) {
-    // Fallback if user not found
-    $userData = [
-        'full_name' => $_SESSION['full_name'] ?? 'tailor',
-        'profile_pic' => $_SESSION['profile_pic'] ?? 'default.jpg',
-        'email' => $_SESSION['email'] ?? '',
-        'phone' => $_SESSION['phone'] ?? ''
-    ];
-}
-
-// Get statistics using EXISTING methods from your classes
-try {
-    // Total products - check if method exists
-    if (method_exists($product, 'getTotalProductsCount')) {
-        $totalProducts = $product->getTotalProductsCount($tailorId);
-    } else {
-        // Fallback: direct database query
-        $db->query("SELECT COUNT(*) as count FROM products WHERE tailor_id = :tailor_id");
-        $db->bind(':tailor_id', $tailorId);
-        $result = $db->single();
-        $totalProducts = $result['count'] ?? 0;
-    }
-} catch (Exception $e) {
-    $totalProducts = 0;
-}
-
-try {
-    // Total orders - using existing method from Order class
-    $totalOrders = $order->getTotalOrdersByTailor($tailorId);
-} catch (Exception $e) {
-    $totalOrders = 0;
-}
-
-try {
-    // Pending orders - using existing method from Order class
-    $pendingOrders = $order->getPendingOrdersCount($tailorId);
-} catch (Exception $e) {
-    $pendingOrders = 0;
-}
-
-try {
-    // Completed orders - using existing method from Order class
-    $completedOrders = $order->getCompletedOrdersCount($tailorId);
-} catch (Exception $e) {
-    $completedOrders = 0;
-}
-
-try {
-    // Revenue - using existing method from Order class
-    $revenue = $order->getTotalRevenueByTailor($tailorId);
-} catch (Exception $e) {
-    $revenue = 0;
-}
-
-try {
-    // Recent orders - using existing method from Order class
-    $recentOrders = $order->getRecentOrdersByTailor($tailorId, 5);
-} catch (Exception $e) {
-    $recentOrders = [];
-}
-
-// Get recent messages directly from database
-try {
-    $db->query("SELECT m.*, u.full_name as sender_name, u.profile_pic 
-                FROM messages m 
-                JOIN users u ON m.sender_id = u.id 
-                WHERE m.receiver_id = :tailor_id 
-                ORDER BY m.created_at DESC 
-                LIMIT 5");
-    $db->bind(':tailor_id', $tailorId);
-    $recentMessages = $db->resultSet();
-} catch (Exception $e) {
-    $recentMessages = [];
-}
-
-// Get low stock products
-try {
-    $db->query("SELECT id, title, stock, images 
-                FROM products 
-                WHERE tailor_id = :tailor_id 
-                AND stock > 0 
-                AND stock <= 5 
-                ORDER BY stock ASC 
-                LIMIT 4");
-    $db->bind(':tailor_id', $tailorId);
-    $productsLowStock = $db->resultSet();
-} catch (Exception $e) {
-    $productsLowStock = [];
-}
-
-// Get unread message count
-try {
-    $db->query("SELECT COUNT(*) as unread_count FROM messages 
-                WHERE receiver_id = :tailor_id AND is_read = 0");
-    $db->bind(':tailor_id', $tailorId);
-    $unreadResult = $db->single();
-    $unreadMessages = $unreadResult['unread_count'] ?? 0;
-} catch (Exception $e) {
-    $unreadMessages = 0;
-}
-
-// Get today's orders
-try {
-    $db->query("SELECT COUNT(*) as today_orders FROM orders 
-                WHERE tailor_id = :tailor_id 
-                AND DATE(created_at) = CURDATE()");
-    $db->bind(':tailor_id', $tailorId);
-    $todayResult = $db->single();
-    $todayOrders = $todayResult['today_orders'] ?? 0;
-} catch (Exception $e) {
-    $todayOrders = 0;
-}
+// Stats using methods from your existing Order class
+$totalOrders = $order->getTotalOrdersByTailor($tailorId);
+$recentOrders = $order->getRecentOrdersByTailor($tailorId, 5);
 ?>
 <!DOCTYPE html>
 <html lang="en">

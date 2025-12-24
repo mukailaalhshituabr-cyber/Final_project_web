@@ -1,7 +1,7 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/User.php';
+require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -9,56 +9,38 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    $dashboardPath = '../../pages/' . $_SESSION['user_type'] . '/dashboard.php';
-    if (file_exists($dashboardPath)) {
-        header('Location: ' . $dashboardPath);
-        exit();
-    }
+    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
 }
 
 $error = '';
 $success = '';
-$userType = $_GET['type'] ?? 'customer';
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Collect data
     $data = [
         'username' => trim($_POST['username'] ?? ''),
         'email' => trim($_POST['email'] ?? ''),
         'password' => $_POST['password'] ?? '',
         'confirm_password' => $_POST['confirm_password'] ?? '',
         'full_name' => trim($_POST['full_name'] ?? ''),
-        'user_type' => $_POST['user_type'] ?? 'customer',
+        'user_type' => $_POST['user_type'] ?? 'customer', // Should be 'customer' or 'tailor'
         'phone' => trim($_POST['phone'] ?? ''),
         'address' => trim($_POST['address'] ?? ''),
         'bio' => trim($_POST['bio'] ?? '')
     ];
     
-    // Validate
-    $errors = [];
-    if (empty($data['full_name'])) $errors[] = 'Full name is required';
-    if (empty($data['username'])) $errors[] = 'Username is required';
-    if (empty($data['email'])) $errors[] = 'Email is required';
-    if (empty($data['password'])) $errors[] = 'Password is required';
-    if ($data['password'] !== $data['confirm_password']) $errors[] = 'Passwords do not match';
-    if (strlen($data['password']) < 6) $errors[] = 'Password must be at least 6 characters';
-    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email format';
-    if (!in_array($data['user_type'], ['customer', 'tailor'])) $errors[] = 'Invalid user type';
-    
-    if (empty($errors)) {
+    // Validation Logic
+    if ($data['password'] !== $data['confirm_password']) {
+        $error = 'Passwords do not match';
+    } else {
         $user = new User();
         $result = $user->register($data);
-        
         if (is_numeric($result)) {
-            // Registration successful - redirect to login with success message
             header('Location: login.php?success=1');
             exit();
         } else {
             $error = $result;
         }
-    } else {
-        $error = implode('<br>', $errors);
     }
 }
 ?>

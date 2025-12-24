@@ -1,66 +1,43 @@
 <?php
 require_once dirname(__DIR__, 2) . '/config.php';
-
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/User.php';
 
-// 1. Initialize Session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. Check if already logged in - Redirect to their specific dashboard
-if (isset($_SESSION['user_id']) && isset($_SESSION['user_type'])) {
-    header('Location: ../../pages/' . $_SESSION['user_type'] . '/dashboard.php');
+if (isset($_SESSION['user_id'])) {
+    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
     exit();
 }
-
-
 
 $error = '';
 $success = isset($_GET['success']) ? 'Registration successful! Please login.' : '';
 
-// 3. Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $selectedType = $_POST['user_type'] ?? ''; // From the hidden input in your form
+    $selectedType = $_POST['user_type'] ?? ''; 
 
-    if (empty($email) || empty($password)) {
-        $error = 'Please fill in all fields';
-    } else {
-        $user = new User();
-        $userData = $user->login($email, $password);
-        
-        if ($userData) {
-            // Validate that the account type matches what the user selected on the UI
-            // This prevents a customer from logging in through the Admin toggle
-            if ($userData['user_type'] !== $selectedType) {
-                $error = "This account is not registered as a " . htmlspecialchars($selectedType);
-            } else {
-                // SUCCESS: Secure the session
-                session_regenerate_id(true); 
-                
-                $_SESSION['user_id'] = $userData['id'];
-                $_SESSION['user_type'] = $userData['user_type'];
-                $_SESSION['full_name'] = $userData['full_name'];
-                $_SESSION['email'] = $userData['email'];
-                $_SESSION['username'] = $userData['username'];
-
-                // Log for security auditing
-                error_log("Login successful - User ID: {$userData['id']} as {$userData['user_type']}");
-
-                // Redirect based on the DB type
-                header('Location: ../../pages/' . $userData['user_type'] . '/dashboard.php');
-                exit();
-
-                // Updated redirect logic
-                $redirectPath = "../../pages/" . $userData['user_type'] . "/dashboard.php";
-                header('Location: ' . $redirectPath);
-            }
+    $user = new User();
+    $userData = $user->login($email, $password);
+    
+    if ($userData) {
+        if ($userData['user_type'] !== $selectedType) {
+            $error = "This account is not registered as a " . htmlspecialchars($selectedType);
         } else {
-            $error = 'Invalid email or password';
+            session_regenerate_id(true); 
+            $_SESSION['user_id'] = $userData['id'];
+            $_SESSION['user_type'] = $userData['user_type'];
+            $_SESSION['full_name'] = $userData['full_name'];
+
+            // DIRECTORY FIX: Ensure your folders are /admin/, /customer/, /tailor/
+            header('Location: ../' . $userData['user_type'] . '/dashboard.php');
+            exit();
         }
+    } else {
+        $error = 'Invalid email or password';
     }
 }
 ?>

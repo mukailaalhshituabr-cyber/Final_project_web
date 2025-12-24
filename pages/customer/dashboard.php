@@ -1,15 +1,11 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/User.php';
+require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
 
-// Start session if not started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Check authentication
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'customer') {
     header('Location: ../auth/login.php');
     exit();
 }
@@ -18,91 +14,16 @@ $db = Database::getInstance();
 $user = new User();
 $userId = $_SESSION['user_id'];
 
-// Get user data
 $userData = $user->getUserById($userId);
-
 if (!$userData) {
-    session_destroy();
     header('Location: ../auth/login.php');
     exit();
 }
 
-// Get statistics from database
-try {
-    // Total orders
-    $db->query("SELECT COUNT(*) as count FROM orders WHERE customer_id = :user_id");
-    $db->bind(':user_id', $userId);
-    $totalOrdersResult = $db->single();
-    $totalOrders = $totalOrdersResult['count'] ?? 0;
-    
-    // Pending orders
-    $db->query("SELECT COUNT(*) as count FROM orders WHERE customer_id = :user_id AND status IN ('pending', 'confirmed', 'processing')");
-    $db->bind(':user_id', $userId);
-    $pendingOrdersResult = $db->single();
-    $pendingOrders = $pendingOrdersResult['count'] ?? 0;
-    
-    // Wishlist count
-    $db->query("SELECT COUNT(*) as count FROM wishlist WHERE user_id = :user_id");
-    $db->bind(':user_id', $userId);
-    $wishlistResult = $db->single();
-    $wishlistCount = $wishlistResult['count'] ?? 0;
-    
-    // Total spent
-    $db->query("SELECT SUM(total_amount) as total FROM orders WHERE customer_id = :user_id AND payment_status = 'paid'");
-    $db->bind(':user_id', $userId);
-    $spentResult = $db->single();
-    $totalSpent = $spentResult['total'] ?? 0;
-    
-    // Recent orders (last 5)
-    $db->query("SELECT o.*, p.title as product_title, p.images 
-                FROM orders o 
-                LEFT JOIN order_items oi ON o.id = oi.order_id 
-                LEFT JOIN products p ON oi.product_id = p.id 
-                WHERE o.customer_id = :user_id 
-                ORDER BY o.created_at DESC 
-                LIMIT 5");
-    $db->bind(':user_id', $userId);
-    $recentOrders = $db->resultSet();
-    
-    // Wishlist items
-    $db->query("SELECT p.*, w.created_at as added_date 
-                FROM wishlist w 
-                JOIN products p ON w.product_id = p.id 
-                WHERE w.user_id = :user_id 
-                AND p.status = 'active' 
-                ORDER BY w.created_at DESC 
-                LIMIT 4");
-    $db->bind(':user_id', $userId);
-    $wishlistItems = $db->resultSet();
-    
-    // Unread messages
-    $db->query("SELECT COUNT(*) as count FROM messages WHERE receiver_id = :user_id AND is_read = 0");
-    $db->bind(':user_id', $userId);
-    $messagesResult = $db->single();
-    $unreadMessages = $messagesResult['count'] ?? 0;
-    
-    // Reviews given
-    $db->query("SELECT COUNT(*) as count FROM reviews WHERE user_id = :user_id");
-    $db->bind(':user_id', $userId);
-    $reviewsResult = $db->single();
-    $reviewsGiven = $reviewsResult['count'] ?? 0;
-    
-} catch (Exception $e) {
-    // If database query fails, use default values
-    $totalOrders = 0;
-    $pendingOrders = 0;
-    $wishlistCount = 0;
-    $totalSpent = 0;
-    $recentOrders = [];
-    $wishlistItems = [];
-    $unreadMessages = 0;
-    $reviewsGiven = 0;
-}
-
-// Format profile picture URL
-$profilePic = !empty($userData['profile_pic']) ? 
-    SITE_URL . '/assets/images/avatars/' . $userData['profile_pic'] : 
-    SITE_URL . '/assets/images/avatars/default.jpg';
+// Database stats
+$db->query("SELECT COUNT(*) as count FROM orders WHERE customer_id = :user_id");
+$db->bind(':user_id', $userId);
+$totalOrders = $db->single()['count'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
