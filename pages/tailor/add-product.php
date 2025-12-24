@@ -1,4 +1,6 @@
 <?php
+const uploadArea = document.getElementById('image-upload-area');
+ add customization option
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/Product.php';
@@ -661,207 +663,351 @@ $categories = $db->getCategories();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script>
-        // Initialize Summernote editor
-        document.addEventListener('DOMContentLoaded', function() {
-            $('#description').summernote({
-                height: 200,
-                toolbar: [
-                    ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['font', ['strikethrough', 'superscript', 'subscript']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'picture']],
-                    ['view', ['fullscreen', 'codeview', 'help']]
-                ],
-                placeholder: 'Describe your product in detail...'
-            });
-            
-            // Customization options toggle
-            const customizableCheckbox = document.getElementById('is_customizable');
-            const optionsContainer = document.getElementById('customization-options-container');
-            
-            customizableCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    optionsContainer.style.display = 'block';
-                } else {
-                    optionsContainer.style.display = 'none';
-                }
-            });
-            
-            // Add customization option
-            let optionCount = 0;
-            document.getElementById('add-customization-option').addEventListener('click', function() {
-                optionCount++;
-                const optionHtml = `
-                    <div class="customization-option" id="option-${optionCount}">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">Customization Option</h6>
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-option" 
-                                    data-option="${optionCount}">
-                                <i class="bi bi-trash"></i>
-                            </button>
+    // Initialize Summernote editor
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#description').summernote({
+            height: 200,
+            toolbar: [
+                ['style', ['bold', 'italic', 'underline', 'clear']],
+                ['font', ['strikethrough', 'superscript', 'subscript']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['insert', ['link', 'picture']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ],
+            placeholder: 'Describe your product in detail...'
+        });
+        
+        // Customization options toggle
+        const customizableCheckbox = document.getElementById('is_customizable');
+        const optionsContainer = document.getElementById('customization-options-container');
+        
+        customizableCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                optionsContainer.style.display = 'block';
+            } else {
+                optionsContainer.style.display = 'none';
+            }
+        });
+        
+        // Add customization option
+        let optionCount = 0;
+        document.getElementById('add-customization-option').addEventListener('click', function() {
+            optionCount++;
+            const optionHtml = `
+                <div class="customization-option" id="option-${optionCount}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Customization Option</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-option" 
+                                data-option="${optionCount}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Option Name *</label>
+                            <input type="text" class="form-control" name="custom_option_names[]" 
+                                   placeholder="e.g., Color, Size, Material" required>
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Option Name *</label>
-                                <input type="text" class="form-control" name="custom_option_names[]" 
-                                       placeholder="e.g., Color, Size, Material" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Type</label>
-                                <select class="form-select" name="custom_option_types[]">
-                                    <option value="text">Text Input</option>
-                                    <option value="select">Dropdown</option>
-                                    <option value="radio">Radio Buttons</option>
-                                    <option value="checkbox">Checkboxes</option>
-                                    <option value="textarea">Text Area</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Additional Price (CFA)</label>
-                                <input type="number" class="form-control" name="custom_option_prices[]" 
-                                       step="0.01" min="0" value="0">
-                            </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" name="custom_option_types[]">
+                                <option value="text">Text Input</option>
+                                <option value="select">Dropdown</option>
+                                <option value="radio">Radio Buttons</option>
+                                <option value="checkbox">Checkboxes</option>
+                                <option value="textarea">Text Area</option>
+                            </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Option Values</label>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Additional Price (CFA)</label>
+                            <input type="number" class="form-control" name="custom_option_prices[]" 
+                                   step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Option Values</label>
                             <input type="text" class="form-control" name="custom_option_values[]" 
                                    placeholder="Enter comma-separated values for dropdown/radio (optional)">
-                            <small class="text-muted">Only for dropdown and radio button types</small>
-                        </div>
+                        <small class="text-muted">Only for dropdown and radio button types</small>
                     </div>
-                `;
-                document.getElementById('customization-options-list').insertAdjacentHTML('beforeend', optionHtml);
-                
-                // Add event listener for remove button
-                document.querySelector(`#option-${optionCount} .remove-option`).addEventListener('click', function() {
-                    document.getElementById(`option-${this.dataset.option}`).remove();
-                });
+                </div>
+            `;
+            document.getElementById('customization-options-list').insertAdjacentHTML('beforeend', optionHtml);
+            
+            // Add event listener for remove button
+            document.querySelector(`#option-${optionCount} .remove-option`).addEventListener('click', function() {
+                document.getElementById(`option-${this.dataset.option}`).remove();
+            });
+        });
+        
+        // Add specification row
+        let specCount = 1;
+        document.getElementById('add-specification').addEventListener('click', function() {
+            specCount++;
+            const specHtml = `
+                <div class="specification-row row" id="spec-${specCount}">
+                    <div class="col-md-5 mb-2">
+                        <input type="text" class="form-control" name="spec_keys[]" 
+                               placeholder="Specification name">
+                    </div>
+                    <div class="col-md-5 mb-2">
+                        <input type="text" class="form-control" name="spec_values[]" 
+                               placeholder="Value">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <button type="button" class="btn btn-outline-danger w-100 remove-specification" 
+                                data-spec="${specCount}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('specifications-container').insertAdjacentHTML('beforeend', specHtml);
+            
+            // Show remove button on all rows except first
+            document.querySelectorAll('.specification-row').forEach(row => {
+                row.querySelector('.remove-specification').style.display = 'block';
             });
             
-            // Add specification row
-            let specCount = 1;
-            document.getElementById('add-specification').addEventListener('click', function() {
-                specCount++;
-                const specHtml = `
-                    <div class="specification-row row" id="spec-${specCount}">
-                        <div class="col-md-5 mb-2">
-                            <input type="text" class="form-control" name="spec_keys[]" 
-                                   placeholder="Specification name">
-                        </div>
-                        <div class="col-md-5 mb-2">
-                            <input type="text" class="form-control" name="spec_values[]" 
-                                   placeholder="Value">
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <button type="button" class="btn btn-outline-danger w-100 remove-specification" 
-                                    data-spec="${specCount}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('specifications-container').insertAdjacentHTML('beforeend', specHtml);
-                
-                // Show remove button on all rows except first
-                document.querySelectorAll('.specification-row').forEach(row => {
-                    row.querySelector('.remove-specification').style.display = 'block';
-                });
-                
-                // Add event listener for remove button
-                document.querySelector(`#spec-${specCount} .remove-specification`).addEventListener('click', function() {
-                    document.getElementById(`spec-${this.dataset.spec}`).remove();
-                });
+            // Add event listener for remove button
+            document.querySelector(`#spec-${specCount} .remove-specification`).addEventListener('click', function() {
+                document.getElementById(`spec-${this.dataset.spec}`).remove();
             });
+        });
+        
+        // --- FIXED IMAGE UPLOAD LOGIC ---
+        const imageUploadArea = document.getElementById('image-upload-area');
+        const imageInput = document.getElementById('image-input');
+        const browseBtn = document.getElementById('browse-images-btn');
+        const previewContainer = document.getElementById('image-preview-container');
+        const uploadProgress = document.getElementById('upload-progress');
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const fileInfo = document.getElementById('file-info');
+        
+        let uploadedFiles = []; // Store File objects
+        
+        // Method 1: Click browse button
+        browseBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
+        
+        // Method 2: Click anywhere in upload area
+        imageUploadArea.addEventListener('click', (e) => {
+            // Only trigger if not clicking on the browse button
+            if (!e.target.closest('#browse-images-btn')) {
+                imageInput.click();
+            }
+        });
+        
+        // Handle file selection via file input
+        imageInput.addEventListener('change', function(e) {
+            handleFiles(this.files);
+        });
+        
+        // Drag & Drop Handlers
+        ['dragenter', 'dragover'].forEach(eventName => {
+            imageUploadArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            imageUploadArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            imageUploadArea.classList.add('drag-over');
+        }
+        
+        function unhighlight(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            imageUploadArea.classList.remove('drag-over');
+        }
+        
+        // Handle drop
+        imageUploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             
-            // ... (keep your existing customization and specification code above this) ...
-
-            // --- IMAGE UPLOAD LOGIC ---
-            const uploadArea = document.getElementById('image-upload-area');
-            const imageInput = document.getElementById('image-input');
-            const browseBtn = document.getElementById('browse-images-btn');
-            const previewContainer = document.getElementById('image-preview-container');
-
-            // 1. Click to browse
-            browseBtn.addEventListener('click', () => imageInput.click());
-
-            // 2. Handle file selection via browse button
-            imageInput.addEventListener('change', function() {
-                handleFiles(this.files);
-            });
-
-            // 3. Drag & Drop Handlers
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, false);
-            });
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => uploadArea.classList.add('highlight'), false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('highlight'), false);
-            });
-
-            uploadArea.addEventListener('drop', function(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                imageInput.files = files; // Sync files to the hidden input
-                handleFiles(files);
-            });
-
-            function handleFiles(files) {
-                const filesArray = Array.from(files);
-                if (filesArray.length > 8) {
-                    alert("Maximum 8 images allowed.");
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        });
+        
+        function handleFiles(files) {
+            const maxFiles = 8;
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            // Convert FileList to Array
+            const filesArray = Array.from(files);
+            
+            // Check if adding these files would exceed limit
+            if (uploadedFiles.length + filesArray.length > maxFiles) {
+                alert(`You can only upload up to ${maxFiles} images. You currently have ${uploadedFiles.length} images.`);
+                return;
+            }
+            
+            // Process each file
+            let processedFiles = 0;
+            const validFiles = [];
+            
+            // Show upload progress
+            uploadProgress.classList.add('active');
+            progressBar.style.width = '0%';
+            fileInfo.textContent = `Processing images...`;
+            
+            filesArray.forEach((file, index) => {
+                // Check file size
+                if (file.size > maxSize) {
+                    alert(`File "${file.name}" is too large. Maximum size is 5MB.`);
                     return;
                 }
                 
-                // Clear existing previews if you want to replace them, 
-                // or leave empty to append
-                previewContainer.innerHTML = ''; 
-
-                filesArray.forEach(file => {
-                    if (!file.type.startsWith('image/')) return;
-
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'image-preview-wrapper';
-                        wrapper.innerHTML = `
-                            <img src="${e.target.result}" class="image-preview">
-                            <button type="button" class="remove-image">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        `;
-                        
-                        wrapper.querySelector('.remove-image').onclick = function() {
-                            wrapper.remove();
-                            // Note: Removing from UI doesn't remove from FileList 
-                            // (which is read-only), but for a basic form, this works.
-                        };
-                        
-                        previewContainer.appendChild(wrapper);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            // --- SPECIFICATION LOGIC (Add this if not already there) ---
-            document.getElementById('add-specification').addEventListener('click', function() {
-                const container = document.getElementById('specifications-container');
-                const row = container.querySelector('.specification-row').cloneNode(true);
-                row.querySelectorAll('input').forEach(input => input.value = '');
-                row.querySelector('.remove-specification').style.display = 'block';
-                container.appendChild(row);
+                // Check file type
+                if (!file.type.match('image/(jpeg|jpg|png|gif|webp)')) {
+                    alert(`File "${file.name}" is not a supported image type. Allowed: JPG, PNG, GIF, WebP`);
+                    return;
+                }
                 
-                row.querySelector('.remove-specification').onclick = function() {
-                    row.remove();
+                validFiles.push(file);
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processedFiles++;
+                    
+                    // Update progress
+                    progressBar.style.width = `${(processedFiles / filesArray.length) * 100}%`;
+                    fileInfo.textContent = `Processing ${processedFiles} of ${filesArray.length} files...`;
+                    
+                    // Add file to uploadedFiles array
+                    uploadedFiles.push(file);
+                    
+                    // Create preview
+                    const preview = document.createElement('div');
+                    preview.className = 'image-preview-wrapper';
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" class="image-preview" alt="Preview">
+                        <button type="button" class="remove-image" data-index="${uploadedFiles.length - 1}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <div class="image-counter">${uploadedFiles.length}</div>
+                    `;
+                    previewContainer.appendChild(preview);
+                    
+                    // Add remove functionality
+                    preview.querySelector('.remove-image').addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        // Remove from uploadedFiles array
+                        uploadedFiles.splice(index, 1);
+                        // Remove preview
+                        preview.remove();
+                        // Update all previews and counters
+                        updatePreviews();
+                        // Update file input (this is tricky but we'll handle it differently)
+                    });
+                    
+                    // When all files are processed
+                    if (processedFiles === filesArray.length) {
+                        setTimeout(() => {
+                            progressBar.style.width = '100%';
+                            fileInfo.textContent = `${processedFiles} file(s) uploaded successfully!`;
+                            setTimeout(() => {
+                                uploadProgress.classList.remove('active');
+                            }, 1000);
+                            
+                            // Update the file input (using DataTransfer)
+                            updateFileInput();
+                        }, 500);
+                    }
                 };
+                reader.readAsDataURL(file);
             });
+        }
+        
+        function updatePreviews() {
+            // Clear all previews
+            previewContainer.innerHTML = '';
+            
+            // Recreate previews for all uploaded files
+            uploadedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.createElement('div');
+                    preview.className = 'image-preview-wrapper';
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" class="image-preview" alt="Preview">
+                        <button type="button" class="remove-image" data-index="${index}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <div class="image-counter">${index + 1}</div>
+                    `;
+                    previewContainer.appendChild(preview);
+                    
+                    // Add remove functionality
+                    preview.querySelector('.remove-image').addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        uploadedFiles.splice(index, 1);
+                        updatePreviews();
+                        updateFileInput();
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            updateFileInput();
+        }
+        
+        function updateFileInput() {
+            // Create a new DataTransfer object
+            const dataTransfer = new DataTransfer();
+            
+            // Add all files to DataTransfer
+            uploadedFiles.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+            
+            // Update the file input
+            imageInput.files = dataTransfer.files;
+            
+            // Debug log
+            console.log('File input updated:', imageInput.files.length, 'files');
+        }
+        
+        // Form validation
+        document.getElementById('productForm').addEventListener('submit', function(e) {
+            const priceInput = document.querySelector('input[name="price"]');
+            if (parseFloat(priceInput.value) <= 0) {
+                e.preventDefault();
+                alert('Price must be greater than 0');
+                priceInput.focus();
+                return false;
+            }
+            
+            // Check if any required fields are empty
+            const requiredFields = this.querySelectorAll('[required]');
+            for (let field of requiredFields) {
+                if (!field.value.trim()) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields');
+                    field.focus();
+                    return false;
+                }
+            }
+            
+            // Check if at least one image is uploaded
+            if (uploadedFiles.length === 0) {
+                e.preventDefault();
+                if (confirm('No images uploaded. Products without images may get less attention. Continue anyway?')) {
+                    return true;
+                }
+                return false;
+            }
+            
+            // Log files before submission
+            console.log('Submitting form with files:', imageInput.files.length);
+            
+            return true;
         });
-    </script>
-</body>
-</html>
+    });
+</script>
