@@ -1,7 +1,8 @@
 <?php
-require_once '../../config.php';
-require_once '../../includes/classes/Database.php';
-require_once '../../includes/classes/User.php';
+require_once dirname(__DIR__, 2) . '/config.php';
+
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
 
 // 1. Initialize Session
 if (session_status() === PHP_SESSION_NONE) {
