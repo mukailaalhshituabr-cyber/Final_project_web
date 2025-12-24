@@ -7,6 +7,215 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
+    exit();
+}
+
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $userType = $_POST['user_type'] ?? 'customer';
+
+    $db = new Database();
+    $conn = $db->getConnection();
+
+    // Fetch user by email
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user && password_verify($password, $user['password'])) {
+        // Validation: Does the chosen login type match the database role?
+        if ($user['user_type'] !== $userType) {
+            $error = "This account is not registered as a " . ucfirst($userType);
+        } else {
+            // Success! Set sessions
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_type'] = $user['user_type'];
+            $_SESSION['username'] = $user['username'];
+
+            // Redirect based on role
+            header("Location: ../" . $user['user_type'] . "/dashboard.php");
+            exit();
+        }
+    } else {
+        $error = "Invalid email or password";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - <?php echo htmlspecialchars(SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2.5rem;
+        }
+        .user-type-btn {
+            flex: 1;
+            border: 2px solid #dee2e6;
+            color: #6c757d;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+        .user-type-btn.active[data-type="customer"] { background-color: #0d6efd; color: white; border-color: #0d6efd; }
+        .user-type-btn.active[data-type="tailor"] { background-color: #212529; color: white; border-color: #212529; }
+        .user-type-btn.active[data-type="admin"] { background-color: #dc3545; color: white; border-color: #dc3545; }
+        
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25); }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">Welcome Back</h2>
+        <p class="text-muted">Sign in to your account</p>
+    </div>
+
+    <div class="user-type-selector d-flex gap-2 mb-4">
+        <button type="button" class="btn user-type-btn active" data-type="customer">
+            <i class="bi bi-person me-1"></i>Customer
+        </button>
+        <button type="button" class="btn user-type-btn" data-type="tailor">
+            <i class="bi bi-scissors me-1"></i>Tailor
+        </button>
+        <button type="button" class="btn user-type-btn" data-type="admin">
+            <i class="bi bi-shield-lock me-1"></i>Admin
+        </button>
+    </div>
+
+    <?php if ($error): ?>
+        <div class="alert alert-danger small py-2"><?php echo $error; ?></div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['success'])): ?>
+        <div class="alert alert-success small py-2">Registration successful! Please login.</div>
+    <?php endif; ?>
+
+    <form method="POST" action="" id="loginForm">
+        <input type="hidden" name="user_type" id="loginUserType" value="customer">
+        
+        <div id="adminWarning" class="alert alert-warning d-none small">
+            <i class="bi bi-shield-exclamation me-2"></i>Admin login requires special credentials.
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" id="emailLabel">Email Address</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control" name="email" required 
+                       value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control" name="password" id="passwordField" required>
+                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 mb-3">
+            Sign In as Customer
+        </button>
+
+        <div class="text-center">
+            <a href="forgot-password.php" class="text-decoration-none small">Forgot Password?</a>
+            <hr>
+            <p class="small mb-0">Don't have an account? <a href="register.php" class="fw-bold text-decoration-none">Register</a></p>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userTypeBtns = document.querySelectorAll('.user-type-btn');
+    const loginUserType = document.getElementById('loginUserType');
+    const submitBtn = document.getElementById('submitBtn');
+    const adminWarning = document.getElementById('adminWarning');
+    const emailLabel = document.getElementById('emailLabel');
+    const passwordField = document.getElementById('passwordField');
+    const toggleBtn = document.getElementById('togglePassword');
+
+    // Switch Role Logic
+    userTypeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.dataset.type;
+            
+            userTypeBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            loginUserType.value = type;
+            
+            if (type === 'admin') {
+                submitBtn.className = "btn btn-danger w-100 py-2 mb-3";
+                submitBtn.innerText = "Admin Login";
+                adminWarning.classList.remove('d-none');
+                emailLabel.innerText = "Admin Email";
+            } else if (type === 'tailor') {
+                submitBtn.className = "btn btn-dark w-100 py-2 mb-3";
+                submitBtn.innerText = "Sign In as Tailor";
+                adminWarning.classList.add('d-none');
+                emailLabel.innerText = "Tailor Email Address";
+            } else {
+                submitBtn.className = "btn btn-primary w-100 py-2 mb-3";
+                submitBtn.innerText = "Sign In as Customer";
+                adminWarning.classList.add('d-none');
+                emailLabel.innerText = "Email Address";
+            }
+        });
+    });
+
+    // Toggle Password Visibility
+    toggleBtn.addEventListener('click', function() {
+        const type = passwordField.type === 'password' ? 'text' : 'password';
+        passwordField.type = type;
+        this.querySelector('i').classList.toggle('bi-eye');
+        this.querySelector('i').classList.toggle('bi-eye-slash');
+    });
+});
+</script>
+
+</body>
+</html>
+
+
+
+<?php
+/*require_once dirname(__DIR__, 2) . '/config.php';
+require_once ROOT_PATH . '/includes/classes/Database.php';
+require_once ROOT_PATH . '/includes/classes/User.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (isset($_SESSION['user_id'])) {
     header('Location: ../' . $_SESSION['user_type'] . '/dashboard.php');
     exit();
@@ -162,7 +371,7 @@ if (password_verify($password, $user['password'])) {
                                     </div>
 
                                     <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 mb-3">
-                                        Sign In as Customer
+                                        Sign In
                                     </button>
 
                                     <div class="text-center">
@@ -234,8 +443,6 @@ if (password_verify($password, $user['password'])) {
 </html>
 
 
-<?php
-/*
 <!DOCTYPE html>
 <html lang="en">
 <head>
