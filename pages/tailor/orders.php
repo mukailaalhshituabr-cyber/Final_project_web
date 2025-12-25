@@ -1,5 +1,3 @@
-6. pages/tailor/orders.php
-php
 <?php
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
