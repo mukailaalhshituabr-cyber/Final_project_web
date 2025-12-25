@@ -2,6 +2,8 @@
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once ROOT_PATH . '/includes/classes/Database.php';
 require_once ROOT_PATH . '/includes/classes/Product.php';
+require_once ROOT_PATH . '/includes/classes/Order.php';
+
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
